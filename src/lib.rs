@@ -1,4 +1,2 @@
-
-
-pub mod board;
 pub mod assets;
+pub mod board;

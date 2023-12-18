@@ -29,16 +29,8 @@ fn load_textures(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     let i = asset_server.load("minos/I.png");
     let g = asset_server.load("minos/G.png");
 
-    let textures = MinoTextures {
-        t,
-        o,
-        l,
-        j,
-        s,
-        z,
-        i,
-        g,
-    };
+    #[rustfmt::skip]
+    let textures = MinoTextures { t, o, l, j, s, z, i, g };
 
     commands.insert_resource(textures);
 }
