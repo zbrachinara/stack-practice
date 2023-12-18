@@ -3,6 +3,11 @@ name = "quickstacking"
 version = "0.1.0"
 edition = "2021"
 
+[[test]]
+name="view_textures"
+path="custom_tests/texture_tests.rs"
+harness=false
+
 [profile.dev.package."*"]
 opt-level = 3
 

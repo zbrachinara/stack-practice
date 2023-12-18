@@ -1,6 +1,6 @@
 use bevy::{app::App, DefaultPlugins};
 
-mod board;
+use quickstacking::*;
 
 fn main() {
     App::new()
