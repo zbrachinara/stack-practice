@@ -13,3 +13,5 @@ opt-level = 3
 
 [dependencies]
 bevy = { version = "0.12.1", features = ["dynamic_linking"] }
+if_chain = "1.0.2"
+tracing = "0.1.40"
