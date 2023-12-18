@@ -26,7 +26,8 @@ pub struct Controller {
     shift_right: bool,
     repeat_left: bool,
     repeat_right: bool,
-    repeat_left_after: Option<Duration>,
+    repeater_left: Repeatable,
+    repeater_right: Repeatable,
 
     hard_drop: bool,
     soft_drop: bool,
@@ -41,8 +42,36 @@ pub struct Controller {
 const REPEAT_START_DELAY: Duration = Duration::from_millis(2000);
 const REPEAT_DELAY: Duration = Duration::from_millis(100);
 
+#[derive(Default, Clone, Copy)]
 struct Repeatable {
-    
+    repeat_at: Option<Duration>,
+}
+
+impl Repeatable {
+    fn update(&mut self, time: &Res<Time>, activation: bool) -> (bool, bool) {
+        if activation {
+            if let Some(time_to_repeat) = self.repeat_at {
+                if time_to_repeat < time.elapsed() {
+                    tracing::debug!("registered a repeat activation");
+                    let now = time.elapsed();
+                    // self.repeat_activation = true;
+                    self.repeat_at = Some(now + REPEAT_DELAY);
+                    return (false, true);
+                }
+            } else {
+                // key has been pressed for the first time
+                tracing::debug!("registered a single activation");
+                let now = time.elapsed();
+                self.repeat_at = Some(now + REPEAT_START_DELAY);
+                return (true, false);
+            }
+        } else {
+            // key was released, deactivate repeats
+            self.repeat_at = None;
+        }
+
+        (false, false)
+    }
 }
 
 /// Turns raw kb input into controller input which directly maps to actions on the board
@@ -69,26 +98,17 @@ fn process_input(keys: Res<Input<KeyCode>>, time: Res<Time>, mut controller: Res
     }
 
     // repeatable keys
-    if keys.pressed(KeyCode::A) {
-        if let Some(time_to_repeat) = controller.repeat_left_after {
-            if time_to_repeat < time.elapsed() {
-                tracing::debug!("registered a left repeat");
-                let now = time.elapsed();
-                controller.repeat_left = true;
-                controller.repeat_left_after = Some(now + REPEAT_DELAY);
-            }
-        } else {
-            // key has been pressed for the first time
-            tracing::debug!("registered a left shift");
-            let now = time.elapsed();
-            controller.shift_left = true;
-            controller.repeat_left_after = Some(now + REPEAT_START_DELAY);
-        }
-    } else {
-        // key was released, deactivate repeats
-        tracing::debug!("left repeat inactive");
-        controller.repeat_left_after = None;
-    }
+    let (shift_left, repeat_left) = controller
+        .repeater_left
+        .update(&time, keys.pressed(KeyCode::A));
+    let (shift_right, repeat_right) = controller
+        .repeater_right
+        .update(&time, keys.pressed(KeyCode::D));
+
+    controller.shift_left = shift_left;
+    controller.shift_right = shift_right;
+    controller.repeat_left = repeat_left;
+    controller.repeat_right = repeat_right;
 }
 
 /// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
@@ -99,9 +119,11 @@ fn redraw_board(mut commands: Commands, board: Res<Board>, controller: Res<Contr
 }
 
 fn reset_controller(mut controller: ResMut<Controller>) {
-    let repeat_left_after = controller.repeat_left_after;
+    let repeater_left = controller.repeater_left;
+    let repeater_right = controller.repeater_right;
     std::mem::take(&mut *controller);
-    controller.repeat_left_after = repeat_left_after;
+    controller.repeater_right = repeater_right;
+    controller.repeater_left = repeater_left;
 }
 
 pub struct BoardPlugin;
