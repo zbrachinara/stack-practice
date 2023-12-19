@@ -1,17 +1,22 @@
 use bevy::{
     app::{Plugin, PostUpdate, Startup, Update},
     asset::{Assets, Handle},
+    core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         bundle::Bundle,
         component::Component,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Local, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
     math::{ivec2, IVec2, UVec2},
-    render::{render_resource::Extent3d, texture::Image, view::InheritedVisibility},
+    render::{
+        render_resource::Extent3d,
+        texture::Image,
+        view::{InheritedVisibility, Visibility},
+    },
     sprite::SpriteBundle,
-    transform::components::{Transform, GlobalTransform},
+    transform::components::{GlobalTransform, Transform},
     utils::default,
 };
 
@@ -21,6 +26,7 @@ use crate::assets::{textures_are_loaded, MinoTextures};
 
 use self::controller::{process_input, reset_controller, Controller};
 
+#[derive(Debug)]
 #[rustfmt::skip]
 enum MinoKind {
     T, O, L, J, S, Z, I, G, E
@@ -110,6 +116,7 @@ impl BoardTextures {
     }
 }
 
+#[derive(Debug)]
 struct MatrixUpdate {
     loc: IVec2,
     kind: MinoKind,
@@ -122,10 +129,15 @@ struct MatrixUpdates(Vec<MatrixUpdate>);
 pub struct Board {
     transform: Transform,
     global_transform: GlobalTransform,
+    visibility: Visibility,
     inherited_visibility: InheritedVisibility,
     matrix: Matrix,
     updates: MatrixUpdates,
     textures: BoardTextures,
+}
+
+fn spawn_default_camera(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
 }
 
 fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>) {
@@ -142,6 +154,7 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         .spawn(Board {
             transform: default(),
             global_transform: default(),
+            visibility: Visibility::Visible,
             inherited_visibility: default(),
             matrix: default(),
             updates: default(),
@@ -151,8 +164,20 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
 }
 
 /// Update the state of the memory-representation of the board using player input
-fn update_board(board: Query<(&mut Matrix, &mut MatrixUpdates)>, controller: Res<Controller>) {
-    // unimplemented!()
+fn update_board(
+    mut board: Query<(&mut Matrix, &mut MatrixUpdates)>,
+    controller: Res<Controller>,
+    mut activated: Local<bool>,
+) {
+    if !*activated {
+        if let Some((_, mut up)) = board.iter_mut().next() {
+            *activated = true;
+            up.0.push(MatrixUpdate {
+                loc: ivec2(0, 0),
+                kind: MinoKind::G,
+            })
+        }
+    }
 }
 
 /// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
@@ -208,7 +233,7 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Controller::default())
-            .add_systems(Startup, spawn_board)
+            .add_systems(Startup, (spawn_board, spawn_default_camera))
             .add_systems(Update, (process_input, update_board.after(process_input)))
             .add_systems(
                 PostUpdate,

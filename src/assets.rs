@@ -1,6 +1,6 @@
 use bevy::{
     app::{Plugin, Startup},
-    asset::{AssetServer, Handle},
+    asset::{AssetServer, Handle, Assets},
     ecs::system::{Commands, ResMut, Resource, Res},
     render::texture::Image,
 };
@@ -17,6 +17,23 @@ pub struct MinoTextures {
     pub z: Handle<Image>,
     pub i: Handle<Image>,
     pub g: Handle<Image>,
+}
+
+impl MinoTextures {
+    
+pub fn iter(&self) -> impl Iterator<Item = Handle<Image>> {
+    [
+        self.t.clone(),
+        self.o.clone(),
+        self.l.clone(),
+        self.j.clone(),
+        self.s.clone(),
+        self.z.clone(),
+        self.i.clone(),
+        self.g.clone(),
+    ]
+    .into_iter()
+}
 }
 
 fn load_textures(mut commands: Commands, asset_server: ResMut<AssetServer>) {
@@ -36,8 +53,8 @@ fn load_textures(mut commands: Commands, asset_server: ResMut<AssetServer>) {
 }
 
 /// A system that checks if mino textures have been loaded
-pub fn textures_are_loaded(resource: Option<Res<MinoTextures>>) -> bool {
-    resource.is_some()
+pub fn textures_are_loaded(resource: Option<Res<MinoTextures>>, assets: Res<Assets<Image>>) -> bool {
+    resource.is_some_and(|e| e.iter().all(|i| assets.contains(i)))
 }
 
 impl Plugin for MinoPlugin {

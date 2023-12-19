@@ -1,6 +1,6 @@
 use bevy::{
     app::{App, PostStartup},
-    asset::{Assets, Handle, UpdateAssets},
+    asset::{Assets, UpdateAssets},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::system::{Commands, Local, Res, ResMut},
     render::texture::Image,
@@ -10,20 +10,6 @@ use bevy::{
 };
 
 use quickstacking::assets::{MinoPlugin, MinoTextures};
-
-fn iter(slf: &MinoTextures) -> impl Iterator<Item = Handle<Image>> {
-    [
-        slf.t.clone(),
-        slf.o.clone(),
-        slf.l.clone(),
-        slf.j.clone(),
-        slf.s.clone(),
-        slf.z.clone(),
-        slf.i.clone(),
-        slf.g.clone(),
-    ]
-    .into_iter()
-}
 
 fn display_each_texture(
     mut commands: Commands,
@@ -36,7 +22,7 @@ fn display_each_texture(
     }
 
     let mut atlas_builder = TextureAtlasBuilder::default();
-    for texture in iter(&textures) {
+    for texture in textures.iter() {
         let id = texture.id();
         let Some(texture) = texture_server.get(id) else {
             return;
