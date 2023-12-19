@@ -1,13 +1,15 @@
 use bevy::{
     app::{Plugin, PostUpdate, Startup, Update},
+    asset::{Assets, Handle},
     ecs::{
         bundle::Bundle,
         component::Component,
         entity::Entity,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
+        system::{Commands, Query, Res, ResMut},
     },
-    math::IVec2,
+    math::{ivec2, IVec2},
+    render::texture::Image,
     transform::components::Transform,
     utils::HashMap,
 };
@@ -18,7 +20,7 @@ use self::controller::{process_input, reset_controller, Controller};
 
 #[rustfmt::skip]
 enum MinoKind {
-    T, O, L, J, S, Z, I
+    T, O, L, J, S, Z, I, G, E
 }
 
 #[derive(Default)]
@@ -41,29 +43,74 @@ enum Hold {
     Inactive(MinoKind),
 }
 
-#[derive(Default, Component)]
+const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
+
+#[derive(Component)]
 struct Matrix {
-    grid: HashMap<IVec2, Entity>,
+    grid: Vec<Vec<MinoKind>>,
     bounds: IVec2,
     active: Option<Mino>,
     hold: Hold,
 }
 
-#[derive(Bundle, Default)]
+impl Default for Matrix {
+    fn default() -> Self {
+        Self {
+            grid: Default::default(),
+            bounds: MATRIX_DEFAULT_SIZE,
+            active: Default::default(),
+            hold: Default::default(),
+        }
+    }
+}
+
+#[derive(Component)]
+struct BoardTextures {
+    matrix_cells: Handle<Image>,
+}
+
+impl BoardTextures {
+    /// Initialize textures representing an empty board
+    fn init(dimensions: IVec2, image_server: &mut Assets<Image>) -> Self {
+        todo!()
+    }
+}
+
+enum MatrixUpdate {
+    Empty { loc: IVec2 },
+    Update { loc: IVec2, kind: MinoKind },
+}
+
+#[derive(Default, Component)]
+struct MatrixUpdates(Vec<MatrixUpdate>);
+
+#[derive(Bundle)]
 pub struct Board {
     transform: Transform,
     matrix: Matrix,
+    updates: MatrixUpdates,
+    textures: BoardTextures,
 }
 
-fn spawn_board(mut commands: Commands) {
-    commands.spawn(Board::default());
+fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>) {
+    commands.spawn(Board {
+        transform: Default::default(),
+        matrix: Default::default(),
+        updates: Default::default(),
+        textures: BoardTextures::init(MATRIX_DEFAULT_SIZE, &mut texture_server),
+    });
+}
+
+/// Update the state of the memory-representation of the board using player input
+fn update_board(board: Query<(&mut Matrix, &mut MatrixUpdates)>, controller: Res<Controller>) {
+    unimplemented!()
 }
 
 /// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
-fn redraw_board(mut commands: Commands, board: Query<&mut Matrix>, controller: Res<Controller>) {
-    // TODO complete
+fn redraw_board(board: Query<(&BoardTextures, &mut MatrixUpdates)>) {
+    unimplemented!()
 }
 
 pub struct BoardPlugin;
@@ -72,7 +119,7 @@ impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Controller::default())
             .add_systems(Startup, spawn_board)
-            .add_systems(Update, (process_input, redraw_board.after(process_input)))
-            .add_systems(PostUpdate, reset_controller);
+            .add_systems(Update, (process_input, update_board.after(process_input)))
+            .add_systems(PostUpdate, (reset_controller, redraw_board));
     }
 }

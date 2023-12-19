@@ -3,10 +3,8 @@ use bevy::{
     asset::{Assets, Handle, UpdateAssets},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::system::{Commands, Local, Res, ResMut},
-    math::vec2,
     render::texture::Image,
     sprite::{SpriteBundle, TextureAtlasBuilder},
-    transform::components::Transform,
     utils::default,
     DefaultPlugins,
 };
@@ -62,7 +60,7 @@ fn create_test_camera(mut commands: Commands) {
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, MinoPlugin))
-        .add_systems(PostStartup, (create_test_camera))
+        .add_systems(PostStartup, create_test_camera)
         .add_systems(UpdateAssets, display_each_texture)
         .run();
 }
