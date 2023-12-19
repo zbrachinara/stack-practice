@@ -8,8 +8,8 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
-    math::{ivec2, IVec2},
-    render::texture::Image,
+    math::{ivec2, IVec2, UVec2},
+    render::{render_resource::Extent3d, texture::Image},
     transform::components::Transform,
     utils::HashMap,
 };
@@ -69,10 +69,23 @@ struct BoardTextures {
     matrix_cells: Handle<Image>,
 }
 
+fn transparent_texture(size: UVec2) -> Image {
+    let mut img = Image::default();
+    img.data.fill(0);
+    img.resize(Extent3d {
+        width: size.x,
+        height: size.y,
+        depth_or_array_layers: 1,
+    });
+    img
+}
+
 impl BoardTextures {
     /// Initialize textures representing an empty board
     fn init(dimensions: IVec2, image_server: &mut Assets<Image>) -> Self {
-        todo!()
+        let matrix_cells = transparent_texture(dimensions.as_uvec2());
+        let matrix_cells = image_server.add(matrix_cells);
+        Self { matrix_cells }
     }
 }
 
