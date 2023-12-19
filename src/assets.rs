@@ -1,7 +1,7 @@
 use bevy::{
     app::{Plugin, Startup},
     asset::{AssetServer, Handle},
-    ecs::system::{Commands, ResMut, Resource},
+    ecs::system::{Commands, ResMut, Resource, Res},
     render::texture::Image,
 };
 
@@ -33,6 +33,11 @@ fn load_textures(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     let textures = MinoTextures { t, o, l, j, s, z, i, g };
 
     commands.insert_resource(textures);
+}
+
+/// A system that checks if mino textures have been loaded
+pub fn textures_are_loaded(resource: Option<Res<MinoTextures>>) -> bool {
+    resource.is_some()
 }
 
 impl Plugin for MinoPlugin {
