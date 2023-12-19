@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [[test]]
-name="view_textures"
+name="texture_tests"
 path="custom_tests/texture_tests.rs"
 harness=false
 
