@@ -1,23 +1,30 @@
 use std::time::Duration;
 
 use bevy::{
-    app::{Plugin, PostUpdate, Update},
+    app::{Plugin, PostUpdate, Startup, Update},
     ecs::{
+        bundle::Bundle,
+        component::Component,
         entity::Entity,
         schedule::IntoSystemConfigs,
-        system::{Commands, Res, ResMut, Resource},
+        system::{Commands, Query, Res, ResMut, Resource},
     },
     input::{keyboard::KeyCode, Input},
-    math::{IVec2, Vec3},
+    math::IVec2,
     time::Time,
     transform::components::Transform,
-    utils::{default, HashMap},
+    utils::HashMap,
 };
 
-#[derive(Resource, Default)]
+#[derive(Default, Component)]
+struct Matrix {
+    grid: HashMap<IVec2, Entity>,
+}
+
+#[derive(Bundle, Default)]
 pub struct Board {
     transform: Transform,
-    grid: HashMap<IVec2, Entity>,
+    matrix: Matrix,
 }
 
 #[derive(Resource, Default)]
@@ -111,13 +118,6 @@ fn process_input(keys: Res<Input<KeyCode>>, time: Res<Time>, mut controller: Res
     controller.repeat_right = repeat_right;
 }
 
-/// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
-/// each cell exists on the screen, and this system reads the currently active variant of tetromino
-/// at that location and enables the visibility of that sprite accordingly.
-fn redraw_board(mut commands: Commands, board: Res<Board>, controller: Res<Controller>) {
-    // TODO complete
-}
-
 fn reset_controller(mut controller: ResMut<Controller>) {
     let repeater_left = controller.repeater_left;
     let repeater_right = controller.repeater_right;
@@ -126,16 +126,24 @@ fn reset_controller(mut controller: ResMut<Controller>) {
     controller.repeater_left = repeater_left;
 }
 
+fn spawn_board(mut commands: Commands) {
+    commands.spawn(Board::default());
+}
+
+/// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
+/// each cell exists on the screen, and this system reads the currently active variant of tetromino
+/// at that location and enables the visibility of that sprite accordingly.
+fn redraw_board(mut commands: Commands, board: Query<&mut Matrix>, controller: Res<Controller>) {
+    // TODO complete
+}
+
 pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Board {
-            transform: Transform::from_translation(Vec3::ZERO),
-            ..default()
-        })
-        .insert_resource(Controller::default())
-        .add_systems(Update, (process_input, redraw_board.after(process_input)))
-        .add_systems(PostUpdate, reset_controller);
+        app.insert_resource(Controller::default())
+            .add_systems(Startup, spawn_board)
+            .add_systems(Update, (process_input, redraw_board.after(process_input)))
+            .add_systems(PostUpdate, reset_controller);
     }
 }
