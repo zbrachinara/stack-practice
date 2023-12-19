@@ -1,10 +1,11 @@
 use bevy::{
     app::{App, PostStartup},
-    asset::Handle,
+    asset::{Assets, Handle, UpdateAssets},
     core_pipeline::core_2d::Camera2dBundle,
-    ecs::system::{Commands, Res},
+    ecs::system::{Commands, Local, Res, ResMut},
+    math::vec2,
     render::texture::Image,
-    sprite::SpriteBundle,
+    sprite::{SpriteBundle, TextureAtlasBuilder},
     transform::components::Transform,
     utils::default,
     DefaultPlugins,
@@ -26,17 +27,32 @@ fn iter(slf: &MinoTextures) -> impl Iterator<Item = Handle<Image>> {
     .into_iter()
 }
 
-fn display_each_texture(mut commands: Commands, textures: Res<MinoTextures>) {
-    for (ix, texture) in iter(&textures).enumerate() {
-        let transform = Transform::from_xyz((32 * ix) as f32, 0., 0.);
-        let bundle = SpriteBundle {
-            texture,
-            transform,
-            ..default()
-        };
-
-        commands.spawn(bundle);
+fn display_each_texture(
+    mut commands: Commands,
+    textures: Res<MinoTextures>,
+    mut texture_server: ResMut<Assets<Image>>,
+    mut loaded: Local<bool>,
+) {
+    if *loaded {
+        return;
     }
+
+    let mut atlas_builder = TextureAtlasBuilder::default();
+    for texture in iter(&textures) {
+        let id = texture.id();
+        let Some(texture) = texture_server.get(id) else {
+            return;
+        };
+        atlas_builder.add_texture(id, texture);
+    }
+
+    *loaded = true;
+
+    let texture = atlas_builder.finish(&mut texture_server).unwrap().texture;
+    commands.spawn(SpriteBundle {
+        texture,
+        ..default()
+    });
 }
 
 fn create_test_camera(mut commands: Commands) {
@@ -46,6 +62,7 @@ fn create_test_camera(mut commands: Commands) {
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, MinoPlugin))
-        .add_systems(PostStartup, (create_test_camera, display_each_texture))
+        .add_systems(PostStartup, (create_test_camera))
+        .add_systems(UpdateAssets, display_each_texture)
         .run();
 }
