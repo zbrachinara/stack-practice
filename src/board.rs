@@ -16,9 +16,37 @@ mod controller;
 
 use self::controller::{process_input, reset_controller, Controller};
 
+#[rustfmt::skip]
+enum MinoKind {
+    T, O, L, J, S, Z, I
+}
+
+#[derive(Default)]
+#[rustfmt::skip]
+enum RotationState {
+    #[default] Up, Right, Down, Left
+}
+
+struct Mino {
+    kind: MinoKind,
+    translation: IVec2,
+    rotation: RotationState,
+}
+
+#[derive(Default)]
+enum Hold {
+    #[default]
+    Empty,
+    Active(MinoKind),
+    Inactive(MinoKind),
+}
+
 #[derive(Default, Component)]
 struct Matrix {
     grid: HashMap<IVec2, Entity>,
+    bounds: IVec2,
+    active: Option<Mino>,
+    hold: Hold,
 }
 
 #[derive(Bundle, Default)]
