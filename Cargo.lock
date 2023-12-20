@@ -2736,6 +2736,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "if_chain",
+ "ron",
+ "serde",
  "tap",
  "tracing",
 ]

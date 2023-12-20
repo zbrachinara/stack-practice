@@ -29,9 +29,9 @@ use crate::assets::{textures_are_loaded, MinoTextures};
 
 use self::controller::{process_input, reset_controller, Controller};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy)]
 #[rustfmt::skip]
-enum MinoKind {
+pub enum MinoKind {
     T, O, L, J, S, Z, I, G, E
 }
 
@@ -52,9 +52,9 @@ impl MinoKind {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy, Debug)]
 #[rustfmt::skip]
-enum RotationState {
+pub enum RotationState {
     #[default] Up, Right, Down, Left
 }
 
