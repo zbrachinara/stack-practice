@@ -46,7 +46,7 @@ impl MinoKind {
             MinoKind::Z => &textures.z,
             MinoKind::I => &textures.i,
             MinoKind::G => &textures.g,
-            MinoKind::E => panic!(),
+            MinoKind::E => &textures.e,
         }
         .clone()
     }
@@ -212,6 +212,31 @@ fn update_board(
     }
 }
 
+/// This function FLIPS the image of `src` in the y direction, and it also flips `location` in the y
+/// direction relative to standard bevy coordinates (that is, y points down).
+///
+/// Copies data from `src` into a region in `dst`. The region is described by `location`. It is
+/// interpreted as a square with length `CELL_SIZE`, positioned at the given coordinate *after*
+/// scaled by `CELL_SIZE`.
+///
+/// Essentially each image is treated as a grid, and one grid square is copied from src to dst.
+pub(crate) fn copy_from_to(dst: &mut Image, src: &Image, location: IVec2) {
+    let width = dst.width();
+    let location = location.as_uvec2() * CELL_SIZE;
+    let region = (location.y..location.y + CELL_SIZE).map(|col| {
+        let offset = ((location.x + col * width) * 4) as usize;
+        let offset_end = offset + (CELL_SIZE as usize) * 4;
+        (offset, offset_end)
+    });
+
+    src.data
+        .chunks_exact(CELL_SIZE as usize * 4)
+        .zip(region)
+        .for_each(|(src, (a, b))| {
+            dst.data[a..b].copy_from_slice(src);
+        })
+}
+
 /// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
@@ -231,31 +256,9 @@ fn redraw_board(
             .unwrap();
 
         for up in updates.0.drain(..) {
-            let location = up.loc.as_uvec2() * CELL_SIZE;
-            let width = image.width();
-            let region = (location.y..location.y + CELL_SIZE).map(|col| {
-                let offset = ((location.x + col * width) * 4) as usize;
-                let offset_end = offset + (CELL_SIZE as usize) * 4;
-                (offset, offset_end)
-            });
-            match up.kind {
-                MinoKind::E => {
-                    for (a, b) in region {
-                        image.data[a..b].fill(0)
-                    }
-                }
-                kind => {
-                    let tex = kind.select(&mino_textures);
-                    let replace_image = texture_server.get(tex).unwrap();
-                    for (copy_region, (a, b)) in replace_image
-                        .data
-                        .chunks_exact(CELL_SIZE as usize * 4)
-                        .zip(region)
-                    {
-                        image.data[a..b].copy_from_slice(copy_region);
-                    }
-                }
-            }
+            let tex = up.kind.select(&mino_textures);
+            let replace_image = texture_server.get(tex).unwrap();
+            copy_from_to(&mut image, replace_image, up.loc);
         }
 
         *texture_server

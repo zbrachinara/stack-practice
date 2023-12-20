@@ -1,20 +1,13 @@
 use bevy::{
     app::{Plugin, PreUpdate, Startup},
-    asset::{
-        io::Reader, AssetApp, AssetLoader, AssetServer, Assets, AsyncReadExt, Handle, LoadContext,
-    },
-    ecs::{
-        schedule::{Condition, IntoSystemConfigs},
-        system::{Commands, Local, Res, ResMut, Resource},
-    },
+    asset::{AssetApp, AssetServer, Assets, Handle},
+    ecs::system::{Commands, Res, ResMut, Resource},
     render::texture::Image,
 };
 
 pub mod tables;
 
-use tables::{shape_table::ShapeTable, Tables};
-
-use self::tables::{load_tables, TableLoader};
+use self::tables::{load_tables, TableLoader, Tables};
 
 pub struct MinoPlugin;
 
@@ -28,6 +21,7 @@ pub struct MinoTextures {
     pub z: Handle<Image>,
     pub i: Handle<Image>,
     pub g: Handle<Image>,
+    pub e: Handle<Image>,
 }
 
 impl MinoTextures {
@@ -41,6 +35,7 @@ impl MinoTextures {
             self.z.clone(),
             self.i.clone(),
             self.g.clone(),
+            self.e.clone(),
         ]
         .into_iter()
     }
@@ -58,18 +53,13 @@ fn load_textures(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     let z = asset_server.load("minos/Z.png");
     let i = asset_server.load("minos/I.png");
     let g = asset_server.load("minos/G.png");
+    let e = asset_server.load("minos/E.png");
 
     #[rustfmt::skip]
-    let textures = MinoTextures { t, o, l, j, s, z, i, g };
+    let textures = MinoTextures { t, o, l, j, s, z, i, g, e };
 
     commands.insert_resource(textures);
-    commands.insert_resource(DefaultTables(
-        asset_server.load::<Tables>("default.tables"),
-    ));
-}
-
-fn shape_table_needs_loading(res: Option<Res<ShapeTable>>) -> bool {
-    res.is_none()
+    commands.insert_resource(DefaultTables(asset_server.load::<Tables>("default.tables")));
 }
 
 /// A system that checks if mino textures have been loaded
