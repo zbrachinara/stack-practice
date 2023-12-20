@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::{
     app::{Plugin, PostUpdate, Startup, Update},
     asset::{Assets, Handle},
@@ -5,14 +7,13 @@ use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
-        query::With,
+        query::{Changed, With, Added, Or},
         schedule::IntoSystemConfigs,
         system::{Commands, Local, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Children},
-    math::{ivec2, uvec2, IVec2, UVec2},
+    math::{ivec2, IVec2, UVec2},
     render::{
-        camera::OrthographicProjection,
         render_resource::Extent3d,
         texture::Image,
         view::{InheritedVisibility, Visibility},
@@ -21,7 +22,6 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
     utils::default,
 };
-use tap::Tap;
 
 mod controller;
 
@@ -64,7 +64,7 @@ struct Mino {
     rotation: RotationState,
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 enum Hold {
     #[default]
     Empty,
@@ -77,24 +77,32 @@ const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
 const CELL_SIZE: u32 = 32;
 
 #[derive(Component)]
-struct Matrix {
-    grid: Vec<Vec<MinoKind>>,
-    bounds: IVec2,
+struct Bounds {
+    true_bounds: IVec2,
     legal_bounds: IVec2,
-    active: Option<Mino>,
-    hold: Hold,
 }
 
-impl Default for Matrix {
+impl Default for Bounds {
     fn default() -> Self {
         Self {
-            grid: Default::default(),
-            bounds: MATRIX_DEFAULT_SIZE,
+            true_bounds: MATRIX_DEFAULT_SIZE,
             legal_bounds: MATRIX_DEFAULT_LEGAL_BOUNDS,
-            active: Default::default(),
-            hold: Default::default(),
         }
     }
+}
+
+#[derive(Component, Default)]
+struct Active(Option<Mino>);
+
+#[derive(Component, Default)]
+struct Grid(Vec<Vec<MinoKind>>);
+
+#[derive(Bundle, Default)]
+struct Matrix {
+    grid: Grid,
+    bounds: Bounds,
+    active: Active,
+    hold: Hold,
 }
 
 #[derive(Component)]
@@ -168,7 +176,7 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         .spawn(Board {
             transform: default(),
             global_transform: default(),
-            visibility: Visibility::Visible,
+            visibility: default(),
             inherited_visibility: default(),
             matrix: default(),
             updates: default(),
@@ -179,7 +187,7 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
 
 /// Update the state of the memory-representation of the board using player input
 fn update_board(
-    mut board: Query<(&mut Matrix, &mut MatrixUpdates)>,
+    mut board: Query<(&mut Grid, &mut MatrixUpdates)>,
     controller: Res<Controller>,
     mut activated: Local<bool>,
 ) {
@@ -208,6 +216,10 @@ fn redraw_board(
     mino_textures: Res<MinoTextures>,
 ) {
     for (textures, mut updates) in board.iter_mut() {
+        if updates.0.is_empty() {
+            continue;
+        }
+
         let mut image = texture_server
             .get(textures.matrix_cells.clone())
             .cloned()
@@ -248,11 +260,11 @@ fn redraw_board(
 }
 
 fn center_board(
-    boards: Query<(&Matrix, &Children)>,
+    boards: Query<(&Bounds, &Children), Or<(Added<Bounds>, Changed<Bounds>)>>,
     mut sprites: Query<&mut Transform, With<MatrixSprite>>,
 ) {
     for (board, children) in boards.iter() {
-        let board_bounds = board.bounds.as_vec2();
+        let board_bounds = board.true_bounds.as_vec2();
         let legal_bounds = board.legal_bounds.as_vec2();
         let offset = (board_bounds / 2. - legal_bounds / 2.) * (CELL_SIZE as f32);
 
