@@ -1,11 +1,24 @@
 use bevy::{
-    asset::{io::Reader, Asset, AssetEvent, AssetLoader, Assets, AsyncReadExt, LoadContext},
+    asset::{
+        io::Reader, Asset, AssetEvent, AssetLoader, Assets, AsyncReadExt, Handle, LoadContext,
+    },
     ecs::{
-        event::{EventReader, Events},
-        system::{Commands, Res},
+        event::EventReader,
+        system::{Commands, Res, ResMut, Resource},
     },
     reflect::TypePath,
+    render::{
+        render_resource::{Extent3d, TextureDimension, TextureFormat},
+        texture::Image,
+    },
+    utils::hashbrown::HashMap,
 };
+
+use crate::board::{copy_from_to, MinoKind, RotationState, CELL_SIZE};
+
+use self::shape_table::{ShapeParameters, ShapeTable};
+
+use super::MinoTextures;
 
 pub mod shape_table;
 
@@ -40,6 +53,48 @@ impl AssetLoader for TableLoader {
     }
 }
 
+#[derive(Resource)]
+pub struct SpriteTable(pub HashMap<ShapeParameters, Handle<Image>>);
+
+pub(super) fn generate_sprites(
+    mut commands: Commands,
+    shape_table: Res<ShapeTable>,
+    textures: Res<MinoTextures>,
+    mut assets: ResMut<Assets<Image>>,
+) {
+    use MinoKind::*;
+    let sprite_table = [T, O, L, J, S, Z, I]
+        .into_iter()
+        .flat_map(|kind| {
+            use RotationState::*;
+            [(kind, Up), (kind, Left), (kind, Down), (kind, Right)]
+        })
+        .map(|(kind, rotation)| ShapeParameters { kind, rotation })
+        .map(|params| {
+            let positions = shape_table.0.get(&params).unwrap();
+            let mut tex = Image::new_fill(
+                Extent3d {
+                    width: CELL_SIZE * 4,
+                    height: CELL_SIZE * 4,
+                    depth_or_array_layers: 1,
+                },
+                TextureDimension::D2,
+                &[0, 0, 0, 0],
+                TextureFormat::Rgba8UnormSrgb,
+            );
+            let src = assets.get(params.kind.select(&textures)).unwrap();
+
+            for p in positions {
+                copy_from_to(&mut tex, src, *p);
+            }
+
+            (params, assets.add(tex))
+        })
+        .collect();
+
+    commands.insert_resource(SpriteTable(sprite_table))
+}
+
 pub(super) fn load_tables(
     mut commands: Commands,
     mut ev: EventReader<AssetEvent<Tables>>,
@@ -50,7 +105,7 @@ pub(super) fn load_tables(
         _ => None,
     }) {
         let Tables { shape } = assets.get(*q).unwrap().clone();
-        println!("{shape:?}");
+
         commands.insert_resource(shape);
     }
 }

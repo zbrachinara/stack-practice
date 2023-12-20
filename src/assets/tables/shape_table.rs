@@ -4,9 +4,9 @@ use crate::board::{MinoKind, RotationState};
 
 #[derive(serde::Deserialize, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 #[serde(from = "(MinoKind, RotationState)")]
-struct ShapeParameters {
-    kind: MinoKind,
-    rotation: RotationState,
+pub struct ShapeParameters {
+    pub kind: MinoKind,
+    pub rotation: RotationState,
 }
 
 impl From<(MinoKind, RotationState)> for ShapeParameters {
@@ -16,4 +16,4 @@ impl From<(MinoKind, RotationState)> for ShapeParameters {
 }
 
 #[derive(serde::Deserialize, Resource, Clone, Debug)]
-pub struct ShapeTable(HashMap<ShapeParameters, Vec<IVec2>>);
+pub struct ShapeTable(pub HashMap<ShapeParameters, Vec<IVec2>>);

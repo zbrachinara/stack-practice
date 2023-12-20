@@ -36,7 +36,7 @@ pub enum MinoKind {
 }
 
 impl MinoKind {
-    fn select(&self, textures: &Res<MinoTextures>) -> Handle<Image> {
+    pub fn select(&self, textures: &Res<MinoTextures>) -> Handle<Image> {
         match self {
             MinoKind::T => &textures.t,
             MinoKind::O => &textures.o,
@@ -74,7 +74,7 @@ enum Hold {
 
 const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
 const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
-const CELL_SIZE: u32 = 32;
+pub const CELL_SIZE: u32 = 32;
 
 #[derive(Component)]
 struct Bounds {
