@@ -124,6 +124,8 @@ impl BoardTextures {
 
 #[derive(Component)]
 struct MatrixSprite;
+#[derive(Component)]
+struct ActiveSprite;
 
 #[derive(Debug)]
 struct MatrixUpdate {
@@ -166,6 +168,10 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         })
         .insert(MatrixSprite)
         .id();
+    let active_sprite = commands
+        .spawn(SpriteBundle::default())
+        .insert(ActiveSprite)
+        .id();
 
     commands
         .spawn(Board {
@@ -180,7 +186,8 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
             updates: default(),
             textures,
         })
-        .add_child(matrix_sprite);
+        .add_child(matrix_sprite)
+        .add_child(active_sprite);
 }
 
 /// Update the state of the memory-representation of the board using player input
@@ -271,6 +278,8 @@ fn center_board(
     }
 }
 
+fn display_active() {}
+
 pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
@@ -283,6 +292,7 @@ impl Plugin for BoardPlugin {
                 (
                     reset_controller,
                     center_board,
+                    display_active,
                     redraw_board.run_if(textures_are_loaded),
                 ),
             );
