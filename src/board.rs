@@ -7,7 +7,7 @@ use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
-        query::{Changed, With, Added, Or},
+        query::{Added, Changed, Or, With},
         schedule::IntoSystemConfigs,
         system::{Commands, Local, Query, Res, ResMut},
     },
@@ -95,15 +95,7 @@ impl Default for Bounds {
 struct Active(Option<Mino>);
 
 #[derive(Component, Default)]
-struct Grid(Vec<Vec<MinoKind>>);
-
-#[derive(Bundle, Default)]
-struct Matrix {
-    grid: Grid,
-    bounds: Bounds,
-    active: Active,
-    hold: Hold,
-}
+struct Matrix(Vec<Vec<MinoKind>>);
 
 #[derive(Component)]
 struct BoardTextures {
@@ -149,6 +141,9 @@ pub struct Board {
     visibility: Visibility,
     inherited_visibility: InheritedVisibility,
     matrix: Matrix,
+    bounds: Bounds,
+    active: Active,
+    hold: Hold,
     updates: MatrixUpdates,
     textures: BoardTextures,
 }
@@ -179,6 +174,9 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
             visibility: default(),
             inherited_visibility: default(),
             matrix: default(),
+            bounds: default(),
+            active: default(),
+            hold: default(),
             updates: default(),
             textures,
         })
@@ -187,7 +185,7 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
 
 /// Update the state of the memory-representation of the board using player input
 fn update_board(
-    mut board: Query<(&mut Grid, &mut MatrixUpdates)>,
+    mut board: Query<(&mut Matrix, &mut MatrixUpdates)>,
     controller: Res<Controller>,
     mut activated: Local<bool>,
 ) {
