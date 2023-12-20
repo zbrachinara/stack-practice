@@ -5,20 +5,23 @@ use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
+        query::With,
         schedule::IntoSystemConfigs,
         system::{Commands, Local, Query, Res, ResMut},
     },
-    hierarchy::BuildChildren,
-    math::{ivec2, IVec2, UVec2},
+    hierarchy::{BuildChildren, Children},
+    math::{ivec2, uvec2, IVec2, UVec2},
     render::{
+        camera::OrthographicProjection,
         render_resource::Extent3d,
         texture::Image,
         view::{InheritedVisibility, Visibility},
     },
-    sprite::SpriteBundle,
+    sprite::{Sprite, SpriteBundle},
     transform::components::{GlobalTransform, Transform},
     utils::default,
 };
+use tap::Tap;
 
 mod controller;
 
@@ -70,12 +73,14 @@ enum Hold {
 }
 
 const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
+const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
 const CELL_SIZE: u32 = 32;
 
 #[derive(Component)]
 struct Matrix {
     grid: Vec<Vec<MinoKind>>,
     bounds: IVec2,
+    legal_bounds: IVec2,
     active: Option<Mino>,
     hold: Hold,
 }
@@ -85,6 +90,7 @@ impl Default for Matrix {
         Self {
             grid: Default::default(),
             bounds: MATRIX_DEFAULT_SIZE,
+            legal_bounds: MATRIX_DEFAULT_LEGAL_BOUNDS,
             active: Default::default(),
             hold: Default::default(),
         }
@@ -116,6 +122,9 @@ impl BoardTextures {
     }
 }
 
+#[derive(Component)]
+struct MatrixSprite;
+
 #[derive(Debug)]
 struct MatrixUpdate {
     loc: IVec2,
@@ -146,8 +155,13 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
     let matrix_sprite = commands
         .spawn(SpriteBundle {
             texture: textures.matrix_cells.clone(),
+            sprite: Sprite {
+                flip_y: true,
+                ..default()
+            },
             ..default()
         })
+        .insert(MatrixSprite)
         .id();
 
     commands
@@ -169,13 +183,18 @@ fn update_board(
     controller: Res<Controller>,
     mut activated: Local<bool>,
 ) {
+    // TODO: Respond to controller commands
     if !*activated {
         if let Some((_, mut up)) = board.iter_mut().next() {
             *activated = true;
             up.0.push(MatrixUpdate {
                 loc: ivec2(0, 0),
                 kind: MinoKind::G,
-            })
+            });
+            up.0.push(MatrixUpdate {
+                loc: ivec2(9, 19),
+                kind: MinoKind::T,
+            });
         }
     }
 }
@@ -228,6 +247,20 @@ fn redraw_board(
     }
 }
 
+fn center_board(
+    boards: Query<(&Matrix, &Children)>,
+    mut sprites: Query<&mut Transform, With<MatrixSprite>>,
+) {
+    for (board, children) in boards.iter() {
+        let board_bounds = board.bounds.as_vec2();
+        let legal_bounds = board.legal_bounds.as_vec2();
+        let offset = (board_bounds / 2. - legal_bounds / 2.) * (CELL_SIZE as f32);
+
+        let child = *children.iter().find(|q| sprites.contains(**q)).unwrap();
+        sprites.get_mut(child).unwrap().translation = offset.extend(0.0);
+    }
+}
+
 pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
@@ -237,7 +270,11 @@ impl Plugin for BoardPlugin {
             .add_systems(Update, (process_input, update_board.after(process_input)))
             .add_systems(
                 PostUpdate,
-                (reset_controller, redraw_board.run_if(textures_are_loaded)),
+                (
+                    reset_controller,
+                    center_board,
+                    redraw_board.run_if(textures_are_loaded),
+                ),
             );
     }
 }
