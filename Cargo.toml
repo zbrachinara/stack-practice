@@ -8,6 +8,11 @@ name="texture_tests"
 path="custom_tests/texture_tests.rs"
 harness=false
 
+[[test]]
+name="shape_tests"
+path="custom_tests/shape_tests.rs"
+harness=false
+
 [profile.dev.package."*"]
 opt-level = 3
 

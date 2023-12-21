@@ -95,6 +95,10 @@ pub(super) fn generate_sprites(
     commands.insert_resource(SpriteTable(sprite_table))
 }
 
+pub fn need_sprites(r1: Option<Res<ShapeTable>>, r2: Option<Res<SpriteTable>>) -> bool {
+    r1.is_some() && r2.is_none()
+}
+
 pub(super) fn load_tables(
     mut commands: Commands,
     mut ev: EventReader<AssetEvent<Tables>>,

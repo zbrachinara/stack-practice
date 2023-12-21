@@ -1,13 +1,16 @@
 use bevy::{
     app::{Plugin, PreUpdate, Startup},
     asset::{AssetApp, AssetServer, Assets, Handle},
-    ecs::system::{Commands, Res, ResMut, Resource},
+    ecs::{
+        schedule::{Condition, IntoSystemConfigs},
+        system::{Commands, Res, ResMut, Resource},
+    },
     render::texture::Image,
 };
 
 pub mod tables;
 
-use self::tables::{load_tables, TableLoader, Tables};
+use self::tables::{generate_sprites, load_tables, need_sprites, TableLoader, Tables};
 
 pub struct MinoPlugin;
 
@@ -75,6 +78,12 @@ impl Plugin for MinoPlugin {
         app.init_asset::<Tables>()
             .init_asset_loader::<TableLoader>()
             .add_systems(Startup, load_textures)
-            .add_systems(PreUpdate, load_tables);
+            .add_systems(
+                PreUpdate,
+                (
+                    load_tables,
+                    generate_sprites.run_if(need_sprites.and_then(textures_are_loaded)),
+                ),
+            );
     }
 }
