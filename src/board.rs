@@ -52,7 +52,7 @@ impl MinoKind {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy, Debug)]
+#[derive(Default, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy, Debug, PartialOrd, Ord)]
 #[rustfmt::skip]
 pub enum RotationState {
     #[default] Up, Right, Down, Left

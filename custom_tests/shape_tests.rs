@@ -36,11 +36,7 @@ fn spawn_grid(
         let parity = (x + y) % 2 == 0;
         commands.spawn(MaterialMesh2dBundle {
             mesh: meshes.add(shape::Quad::new(size).into()).into(),
-            material: if parity {
-                white.clone()
-            } else {
-                black.clone()
-            },
+            material: if parity { white.clone() } else { black.clone() },
             transform: Transform::from_translation(p.extend(-1.0)),
             ..default()
         });
@@ -60,6 +56,7 @@ fn render_all_pieces(
             sprites
                 .0
                 .iter()
+                .sorted_by_key(|(p, _)| p.rotation)
                 .map(|(p, i)| (p.kind, i))
                 .into_group_map()
                 .into_iter()
