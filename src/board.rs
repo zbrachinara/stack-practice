@@ -1,14 +1,14 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::{
-    app::{Plugin, PostUpdate, Startup, Update},
-    asset::{Assets, Handle, AssetPath},
+    app::{Plugin, PostUpdate, Update},
+    asset::{AssetPath, Assets, Handle},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         bundle::Bundle,
         component::Component,
         query::{Added, Changed, Or, With},
-        schedule::IntoSystemConfigs,
+        schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
         system::{Commands, Local, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Children},
@@ -25,7 +25,7 @@ use bevy::{
 
 mod controller;
 
-use crate::assets::{textures_are_loaded, MinoTextures};
+use crate::{assets::MinoTextures, state::MainState};
 
 use self::controller::{process_input, reset_controller, Controller};
 
@@ -302,16 +302,19 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Controller::default())
-            .add_systems(Startup, (spawn_board, spawn_default_camera))
-            .add_systems(Update, (process_input, update_board.after(process_input)))
+            .add_systems(
+                OnEnter(MainState::Playing),
+                (spawn_board, spawn_default_camera),
+            )
+            .add_systems(
+                Update,
+                (process_input, update_board.after(process_input))
+                    .run_if(in_state(MainState::Playing)),
+            )
             .add_systems(
                 PostUpdate,
-                (
-                    reset_controller,
-                    center_board,
-                    display_active,
-                    redraw_board.run_if(textures_are_loaded),
-                ),
+                (reset_controller, center_board, display_active, redraw_board)
+                    .run_if(in_state(MainState::Playing)),
             );
     }
 }

@@ -1,7 +1,7 @@
 use bevy::{
     app::Plugin,
-    asset::{AssetApp, Assets, Handle},
-    ecs::system::{Res, Resource},
+    asset::{AssetApp, Handle},
+    ecs::system::Resource,
     render::texture::Image,
 };
 use bevy_asset_loader::{
@@ -59,14 +59,6 @@ impl MinoTextures {
 #[derive(Resource)]
 struct DefaultTables(Handle<Tables>);
 
-/// A system that checks if mino textures have been loaded
-pub fn textures_are_loaded(
-    resource: Option<Res<MinoTextures>>,
-    assets: Res<Assets<Image>>,
-) -> bool {
-    resource.is_some_and(|e| e.iter().all(|i| assets.contains(i)))
-}
-
 impl Plugin for StackingAssetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_asset::<Tables>()
@@ -75,15 +67,6 @@ impl Plugin for StackingAssetsPlugin {
             )
             .init_asset_loader::<TableLoader>()
             .add_collection_to_loading_state::<_, MinoTextures>(MainState::Loading)
-            .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading)
-            // .add_systems(Startup, load_textures)
-            // .add_systems(
-            //     PreUpdate,
-            //     (
-            //         load_tables,
-            //         // generate_sprites.run_if(need_sprites.and_then(textures_are_loaded)),
-            //     ),
-            // );
-            ;
+            .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading);
     }
 }
