@@ -115,16 +115,12 @@ impl AssetCollection for SpriteTable {
     }
 
     fn load(world: &mut bevy::prelude::World) -> Vec<bevy::prelude::UntypedHandle> {
-        let asset_server = world
+        let table = world
             .get_resource::<AssetServer>()
-            .expect("Asset server is required");
-        all_shape_parameters()
-            .map(|p| {
-                asset_server
-                    .load_untyped(format!("default.tables#{p}"))
-                    .untyped()
-            })
-            .collect()
+            .expect("Asset server is required")
+            .load_untyped("default.tables")
+            .untyped();
+        vec![table]
     }
 }
 
