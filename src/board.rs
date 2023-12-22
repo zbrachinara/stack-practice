@@ -18,14 +18,20 @@ use bevy::{
         texture::Image,
         view::{InheritedVisibility, Visibility},
     },
-    sprite::{Sprite, SpriteBundle},
+    sprite::{Anchor, Sprite, SpriteBundle},
     transform::components::{GlobalTransform, Transform},
     utils::default,
 };
 
 mod controller;
 
-use crate::{assets::MinoTextures, state::MainState};
+use crate::{
+    assets::{
+        tables::{shape_table::ShapeParameters, SpriteTable},
+        MinoTextures,
+    },
+    state::MainState,
+};
 
 use self::controller::{process_input, reset_controller, Controller};
 
@@ -88,6 +94,9 @@ enum Hold {
 
 const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
 const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
+/// The amount by which the spawn location of the piece is offset from the bottom left corner of its
+/// texture. This should be uniform for all pieces, hence why it is declared constant here.
+const TEXTURE_CENTER_OFFSET: IVec2 = ivec2(1, 2);
 pub const CELL_SIZE: u32 = 32;
 
 #[derive(Component)]
@@ -183,7 +192,14 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         .insert(MatrixSprite)
         .id();
     let active_sprite = commands
-        .spawn(SpriteBundle::default())
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                flip_y: true,
+                anchor: Anchor::BottomLeft,
+                ..default()
+            },
+            ..default()
+        })
         .insert(ActiveSprite)
         .id();
 
@@ -295,7 +311,34 @@ fn center_board(
     }
 }
 
-fn display_active() {}
+/// Updates the visual state of the active piece. The active piece is a child of the board,
+/// initialized in the same system that spawns the board. If the active pice becomes `None`, then
+/// the sprite representing it is hidden. If it is modified in any other way, the sprite's position
+/// and kind will be updated to match.
+fn display_active(
+    active: Query<(&Active, &Bounds, &Children), Or<(Added<Active>, Changed<Active>)>>,
+    mut sprites: Query<(&mut Visibility, &mut Transform, &mut Handle<Image>), With<ActiveSprite>>,
+    sprite_table: Res<SpriteTable>,
+) {
+    for (Active(e), bounds, children) in active.iter() {
+        let active_sprite_id = children.iter().copied().find(|&c| sprites.contains(c));
+        let (mut vis, mut pos, mut tex) = sprites.get_mut(active_sprite_id.unwrap()).unwrap();
+
+        if let Some(piece) = e {
+            let offset = -(bounds.true_bounds.as_vec2() / 2. + TEXTURE_CENTER_OFFSET.as_vec2());
+            let new_pos = (piece.translation.as_vec2() + offset) * CELL_SIZE as f32;
+            pos.translation = new_pos.extend(1.0);
+
+            *tex = sprite_table.0[&ShapeParameters {
+                kind: piece.kind,
+                rotation: piece.rotation,
+            }]
+                .clone();
+        } else {
+            *vis = Visibility::Hidden
+        }
+    }
+}
 
 pub struct BoardPlugin;
 
