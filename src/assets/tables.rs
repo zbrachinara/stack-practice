@@ -53,8 +53,28 @@ impl AssetLoader for TableLoader {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Asset, TypePath)]
 pub struct SpriteTable(pub HashMap<ShapeParameters, Handle<Image>>);
+
+fn generate_sprite(shape_table: &ShapeTable, source: &Image, params: ShapeParameters) -> Image {
+    let positions = shape_table.0.get(&params).unwrap();
+    let mut tex = Image::new_fill(
+        Extent3d {
+            width: CELL_SIZE * 4,
+            height: CELL_SIZE * 4,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &[0, 0, 0, 0],
+        TextureFormat::Rgba8UnormSrgb,
+    );
+
+    for p in positions {
+        copy_from_to(&mut tex, source, *p);
+    }
+
+    tex
+}
 
 pub(super) fn generate_sprites(
     mut commands: Commands,
@@ -69,25 +89,10 @@ pub(super) fn generate_sprites(
             use RotationState::*;
             [(kind, Up), (kind, Left), (kind, Down), (kind, Right)]
         })
-        .map(|(kind, rotation)| ShapeParameters { kind, rotation })
-        .map(|params| {
-            let positions = shape_table.0.get(&params).unwrap();
-            let mut tex = Image::new_fill(
-                Extent3d {
-                    width: CELL_SIZE * 4,
-                    height: CELL_SIZE * 4,
-                    depth_or_array_layers: 1,
-                },
-                TextureDimension::D2,
-                &[0, 0, 0, 0],
-                TextureFormat::Rgba8UnormSrgb,
-            );
+        .map(|(kind, rotation)| {
+            let params = ShapeParameters { kind, rotation };
             let src = assets.get(params.kind.select(&textures)).unwrap();
-
-            for p in positions {
-                copy_from_to(&mut tex, src, *p);
-            }
-
+            let tex = generate_sprite(&shape_table, src, params);
             (params, assets.add(tex))
         })
         .collect();

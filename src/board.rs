@@ -36,7 +36,7 @@ pub enum MinoKind {
 }
 
 impl MinoKind {
-    pub fn select(&self, textures: &Res<MinoTextures>) -> Handle<Image> {
+    pub fn select(&self, textures: &MinoTextures) -> Handle<Image> {
         match self {
             MinoKind::T => &textures.t,
             MinoKind::O => &textures.o,
