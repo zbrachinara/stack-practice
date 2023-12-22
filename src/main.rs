@@ -5,7 +5,8 @@ use quickstacking::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(assets::MinoPlugin)
+        .add_plugins(assets::StackingAssetsPlugin)
         .add_plugins(board::BoardPlugin)
+        .add_plugins(state::StatePlugin)
         .run();
 }

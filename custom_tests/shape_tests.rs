@@ -16,8 +16,8 @@ use bevy::{
 };
 use itertools::{iproduct, Itertools};
 use quickstacking::{
-    assets::{tables::SpriteTable, MinoPlugin},
-    board::CELL_SIZE,
+    assets::{tables::SpriteTable, StackingAssetsPlugin},
+    board::CELL_SIZE, state::StatePlugin,
 };
 
 fn spawn_grid(
@@ -91,7 +91,7 @@ fn camera(mut commands: Commands) {
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, MinoPlugin))
+        .add_plugins((DefaultPlugins, StackingAssetsPlugin, StatePlugin))
         .add_systems(Startup, (camera, spawn_grid))
         .add_systems(Update, render_all_pieces)
         .run();

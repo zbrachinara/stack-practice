@@ -9,7 +9,7 @@ use bevy::{
     DefaultPlugins,
 };
 
-use quickstacking::assets::{MinoPlugin, MinoTextures};
+use quickstacking::assets::{MinoTextures, StackingAssetsPlugin};
 
 fn display_each_texture(
     mut commands: Commands,
@@ -45,7 +45,7 @@ fn create_test_camera(mut commands: Commands) {
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, MinoPlugin))
+        .add_plugins((DefaultPlugins, StackingAssetsPlugin))
         .add_systems(PostStartup, create_test_camera)
         .add_systems(UpdateAssets, display_each_texture)
         .run();

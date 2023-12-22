@@ -2,7 +2,7 @@
 
 use bevy::{
     app::{Plugin, PostUpdate, Startup, Update},
-    asset::{Assets, Handle},
+    asset::{Assets, Handle, AssetPath},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         bundle::Bundle,
@@ -49,6 +49,20 @@ impl MinoKind {
             MinoKind::E => &textures.e,
         }
         .clone()
+    }
+
+    pub fn path_of(&self) -> AssetPath {
+        match self {
+            MinoKind::T => "minos/T.png".into(),
+            MinoKind::O => "minos/O.png".into(),
+            MinoKind::L => "minos/L.png".into(),
+            MinoKind::J => "minos/J.png".into(),
+            MinoKind::S => "minos/S.png".into(),
+            MinoKind::Z => "minos/Z.png".into(),
+            MinoKind::I => "minos/I.png".into(),
+            MinoKind::G => "minos/G.png".into(),
+            MinoKind::E => "minos/E.png".into(),
+        }
     }
 }
 

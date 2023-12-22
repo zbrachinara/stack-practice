@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use bevy::{ecs::system::Resource, math::IVec2, utils::HashMap};
 
 use crate::board::{MinoKind, RotationState};
@@ -7,6 +9,12 @@ use crate::board::{MinoKind, RotationState};
 pub struct ShapeParameters {
     pub kind: MinoKind,
     pub rotation: RotationState,
+}
+
+impl Display for ShapeParameters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}-{:?}", self.kind, self.rotation)
+    }
 }
 
 impl From<(MinoKind, RotationState)> for ShapeParameters {

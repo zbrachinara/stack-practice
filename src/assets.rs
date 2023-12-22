@@ -1,29 +1,41 @@
 use bevy::{
-    app::{Plugin, PreUpdate, Startup},
-    asset::{AssetApp, AssetServer, Assets, Handle},
-    ecs::{
-        schedule::{Condition, IntoSystemConfigs},
-        system::{Commands, Res, ResMut, Resource},
-    },
+    app::Plugin,
+    asset::{AssetApp, Assets, Handle},
+    ecs::system::{Res, Resource},
     render::texture::Image,
+};
+use bevy_asset_loader::{
+    asset_collection::AssetCollection,
+    loading_state::{LoadingState, LoadingStateAppExt},
 };
 
 pub mod tables;
 
-use self::tables::{generate_sprites, load_tables, need_sprites, TableLoader, Tables};
+use crate::state::MainState;
 
-pub struct MinoPlugin;
+use self::tables::{SpriteTable, TableLoader, Tables};
 
-#[derive(Resource)]
+pub struct StackingAssetsPlugin;
+
+#[derive(Resource, AssetCollection)]
 pub struct MinoTextures {
+    #[asset(path = "minos/T.png")]
     pub t: Handle<Image>,
+    #[asset(path = "minos/O.png")]
     pub o: Handle<Image>,
+    #[asset(path = "minos/L.png")]
     pub l: Handle<Image>,
+    #[asset(path = "minos/J.png")]
     pub j: Handle<Image>,
+    #[asset(path = "minos/S.png")]
     pub s: Handle<Image>,
+    #[asset(path = "minos/Z.png")]
     pub z: Handle<Image>,
+    #[asset(path = "minos/I.png")]
     pub i: Handle<Image>,
+    #[asset(path = "minos/G.png")]
     pub g: Handle<Image>,
+    #[asset(path = "minos/E.png")]
     pub e: Handle<Image>,
 }
 
@@ -47,24 +59,6 @@ impl MinoTextures {
 #[derive(Resource)]
 struct DefaultTables(Handle<Tables>);
 
-fn load_textures(mut commands: Commands, asset_server: ResMut<AssetServer>) {
-    let t = asset_server.load("minos/T.png");
-    let o = asset_server.load("minos/O.png");
-    let l = asset_server.load("minos/L.png");
-    let j = asset_server.load("minos/J.png");
-    let s = asset_server.load("minos/S.png");
-    let z = asset_server.load("minos/Z.png");
-    let i = asset_server.load("minos/I.png");
-    let g = asset_server.load("minos/G.png");
-    let e = asset_server.load("minos/E.png");
-
-    #[rustfmt::skip]
-    let textures = MinoTextures { t, o, l, j, s, z, i, g, e };
-
-    commands.insert_resource(textures);
-    commands.insert_resource(DefaultTables(asset_server.load::<Tables>("default.tables")));
-}
-
 /// A system that checks if mino textures have been loaded
 pub fn textures_are_loaded(
     resource: Option<Res<MinoTextures>>,
@@ -73,17 +67,23 @@ pub fn textures_are_loaded(
     resource.is_some_and(|e| e.iter().all(|i| assets.contains(i)))
 }
 
-impl Plugin for MinoPlugin {
+impl Plugin for StackingAssetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_asset::<Tables>()
+            .add_loading_state(
+                LoadingState::new(MainState::Loading).continue_to_state(MainState::Playing),
+            )
             .init_asset_loader::<TableLoader>()
-            .add_systems(Startup, load_textures)
-            .add_systems(
-                PreUpdate,
-                (
-                    load_tables,
-                    generate_sprites.run_if(need_sprites.and_then(textures_are_loaded)),
-                ),
-            );
+            .add_collection_to_loading_state::<_, MinoTextures>(MainState::Loading)
+            .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading)
+            // .add_systems(Startup, load_textures)
+            // .add_systems(
+            //     PreUpdate,
+            //     (
+            //         load_tables,
+            //         // generate_sprites.run_if(need_sprites.and_then(textures_are_loaded)),
+            //     ),
+            // );
+            ;
     }
 }
