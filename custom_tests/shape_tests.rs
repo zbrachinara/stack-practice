@@ -17,7 +17,8 @@ use bevy::{
 use itertools::{iproduct, Itertools};
 use quickstacking::{
     assets::{tables::SpriteTable, StackingAssetsPlugin},
-    board::CELL_SIZE, state::StatePlugin,
+    board::CELL_SIZE,
+    state::StatePlugin,
 };
 
 fn spawn_grid(
