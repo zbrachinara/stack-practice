@@ -24,6 +24,7 @@ use bevy::{
 };
 
 mod controller;
+mod queue;
 
 use crate::{
     assets::{
@@ -33,7 +34,7 @@ use crate::{
     state::MainState,
 };
 
-use self::controller::{process_input, reset_controller, Controller};
+use self::{controller::{process_input, reset_controller, Controller}, queue::PieceQueue};
 
 #[derive(Debug, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy)]
 #[rustfmt::skip]
@@ -169,6 +170,7 @@ pub struct Board {
     bounds: Bounds,
     active: Active,
     hold: Hold,
+    queue: PieceQueue,
     updates: MatrixUpdates,
     textures: BoardTextures,
 }
@@ -213,6 +215,7 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
             bounds: default(),
             active: default(),
             hold: default(),
+            queue: default(),
             updates: default(),
             textures,
         })
