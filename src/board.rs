@@ -12,7 +12,7 @@ use bevy::{
         system::{Commands, Local, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Children},
-    math::{dvec2, ivec2, vec2, IVec2, UVec2},
+    math::{ivec2, vec2, IVec2, UVec2},
     render::{
         color::Color,
         render_resource::Extent3d,
@@ -276,24 +276,35 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
 }
 
 /// Update the state of the memory-representation of the board using player input
-fn update_board(
-    mut board: Query<(&mut Matrix, &mut MatrixUpdates)>,
-    controller: Res<Controller>,
-    mut activated: Local<bool>,
-) {
-    // TODO: Respond to controller commands
-    if !*activated {
-        if let Some((_, mut up)) = board.iter_mut().next() {
-            *activated = true;
-            up.0.push(MatrixUpdate {
-                loc: ivec2(0, 0),
-                kind: MinoKind::G,
-            });
-            up.0.push(MatrixUpdate {
-                loc: ivec2(9, 19),
-                kind: MinoKind::T,
-            });
-        }
+fn update_board(mut board: Query<(&mut Matrix, &mut MatrixUpdates)>, controller: Res<Controller>) {
+    if controller.hard_drop {
+        todo!()
+    } else if controller.soft_drop {
+        todo!()
+    }
+
+    if controller.rotate_180 {
+        todo!()
+    } else if controller.rotate_left {
+        todo!()
+    } else if controller.rotate_right {
+        todo!()
+    }
+
+    if controller.shift_left {
+        todo!()
+    } else if controller.shift_right {
+        todo!()
+    }
+
+    if controller.repeat_left {
+        todo!()
+    } else if controller.repeat_right {
+        todo!()
+    }
+
+    if controller.hold {
+        todo!()
     }
 }
 
