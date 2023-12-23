@@ -14,6 +14,7 @@ pub mod tables;
 use crate::state::MainState;
 
 use self::tables::{
+    kick_table::{DefaultKickTable, KickTable, KickTableLoader},
     shape_table::{ShapeTable, ShapeTableLoader},
     sprite_table::SpriteTable,
 };
@@ -62,11 +63,14 @@ impl MinoTextures {
 impl Plugin for StackingAssetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_asset::<ShapeTable>()
+            .init_asset::<KickTable>()
             .add_loading_state(
                 LoadingState::new(MainState::Loading).continue_to_state(MainState::Playing),
             )
             .init_asset_loader::<ShapeTableLoader>()
+            .init_asset_loader::<KickTableLoader>()
             .add_collection_to_loading_state::<_, MinoTextures>(MainState::Loading)
-            .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading);
+            .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading)
+            .add_collection_to_loading_state::<_, DefaultKickTable>(MainState::Loading);
     }
 }

@@ -52,17 +52,17 @@ impl AssetLoader for ShapeTableLoader {
     ) -> bevy::utils::BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             tracing::debug_span!(module_path!());
-            tracing::debug!("beginning table load");
+            tracing::debug!("beginning shape table load");
 
             let mut bytes = Vec::new();
             reader
                 .read_to_end(&mut bytes)
                 .await
-                .map_err(|_| "Could not read from the given file (when loading table)")?;
-            let tables: ShapeTable =
-                ron::de::from_bytes(&bytes).map_err(|_| "Could not interpret the given table")?;
+                .map_err(|_| "Could not read from the given file (when loading shape table)")?;
+            let shape_table: ShapeTable = ron::de::from_bytes(&bytes)
+                .map_err(|_| "Could not interpret the given shape table")?;
 
-            let shape_table = &tables.0;
+            let shape_table_ref = &shape_table.0;
             let ctx_ref = &ctx;
             let finished_assets = join_all(all_shape_parameters().map(|params| async move {
                 let mut ctx = ctx_ref.begin_labeled_asset();
@@ -74,8 +74,8 @@ impl AssetLoader for ShapeTableLoader {
                     .take()
                     .unwrap();
 
-                for p in &shape_table[&params] {
-                    copy_from_to(&mut new_tex, &src, *p)
+                for &p in &shape_table_ref[&params] {
+                    copy_from_to(&mut new_tex, &src, p)
                 }
 
                 let asset = ctx.finish(new_tex, None);
@@ -87,7 +87,7 @@ impl AssetLoader for ShapeTableLoader {
                 ctx.add_loaded_labeled_asset(name.to_string(), loaded_asset);
             }
 
-            Ok(tables)
+            Ok(shape_table)
         })
     }
 
