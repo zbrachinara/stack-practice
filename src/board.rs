@@ -12,7 +12,7 @@ use bevy::{
         system::{Commands, Local, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Children},
-    math::{ivec2, IVec2, UVec2},
+    math::{ivec2, vec2, IVec2, UVec2},
     render::{
         render_resource::Extent3d,
         texture::Image,
@@ -22,6 +22,7 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
     utils::default,
 };
+use itertools::Itertools;
 
 mod controller;
 mod queue;
@@ -34,7 +35,10 @@ use crate::{
     state::MainState,
 };
 
-use self::{controller::{process_input, reset_controller, Controller}, queue::PieceQueue};
+use self::{
+    controller::{process_input, reset_controller, Controller},
+    queue::PieceQueue,
+};
 
 #[derive(Debug, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy)]
 #[rustfmt::skip]
@@ -150,6 +154,8 @@ impl BoardTextures {
 struct MatrixSprite;
 #[derive(Component)]
 struct ActiveSprite;
+#[derive(Component)]
+struct QueueSprite(usize);
 
 #[derive(Debug)]
 struct MatrixUpdate {
@@ -204,23 +210,47 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         })
         .insert(ActiveSprite)
         .id();
+    let queue_sprites = (0..5)
+        .map(|i| {
+            let offset = MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2. * (CELL_SIZE as f32);
+            let space_horiz = vec2(24., 2.);
+            let space_vert = vec2(0., -(CELL_SIZE as f32 * 4.));
 
-    commands
-        .spawn(Board {
-            transform: default(),
-            global_transform: default(),
-            visibility: default(),
-            inherited_visibility: default(),
-            matrix: default(),
-            bounds: default(),
-            active: default(),
-            hold: default(),
-            queue: default(),
-            updates: default(),
-            textures,
+            let transform = (offset + space_horiz + ((i + 1) as f32) * space_vert).extend(0.);
+
+            commands
+                .spawn(SpriteBundle {
+                    sprite: Sprite {
+                        flip_y: true,
+                        anchor: Anchor::BottomLeft,
+                        ..default()
+                    },
+                    transform: Transform::from_translation(transform),
+                    ..default()
+                })
+                .insert(QueueSprite(i))
+                .id()
         })
-        .add_child(matrix_sprite)
-        .add_child(active_sprite);
+        .collect_vec();
+
+    let mut board = commands.spawn(Board {
+        transform: default(),
+        global_transform: default(),
+        visibility: default(),
+        inherited_visibility: default(),
+        matrix: default(),
+        bounds: default(),
+        active: default(),
+        hold: default(),
+        queue: default(),
+        updates: default(),
+        textures,
+    });
+
+    board.add_child(matrix_sprite).add_child(active_sprite);
+    for e in queue_sprites {
+        board.add_child(e);
+    }
 }
 
 /// Update the state of the memory-representation of the board using player input
@@ -343,6 +373,33 @@ fn display_active(
     }
 }
 
+// TODO: This function does not react to changes to queue window size
+// TODO: This function does not react to changes in matrix bounds
+/// Updates the visual state of the piece queue. When the queue changes, each piece in the queue has
+/// its texture updated to match its intended state.
+fn display_queue(
+    queue: Query<(&PieceQueue, &Children), Or<(Added<PieceQueue>, Changed<PieceQueue>)>>,
+    mut sprites: Query<(&mut Handle<Image>, &QueueSprite)>,
+    sprite_table: Res<SpriteTable>,
+) {
+    for (queue, children) in queue.iter() {
+        for e in children
+            .iter()
+            .copied()
+            .filter(|&e| sprites.contains(e))
+            .collect_vec()
+        {
+            println!("Called");
+            let (mut tex, QueueSprite(n)) = sprites.get_mut(e).unwrap();
+            let selector = ShapeParameters {
+                kind: queue.window()[*n],
+                rotation: RotationState::Up,
+            };
+            *tex = sprite_table.0[&selector].clone();
+        }
+    }
+}
+
 pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
@@ -359,7 +416,13 @@ impl Plugin for BoardPlugin {
             )
             .add_systems(
                 PostUpdate,
-                (reset_controller, center_board, display_active, redraw_board)
+                (
+                    reset_controller,
+                    center_board,
+                    display_active,
+                    display_queue,
+                    redraw_board,
+                )
                     .run_if(in_state(MainState::Playing)),
             );
     }

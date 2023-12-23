@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, iter::repeat_with};
 
 use bevy::{ecs::component::Component, utils::default};
-use rand::{rngs::StdRng, seq::SliceRandom, thread_rng, Rng, SeedableRng};
+use rand::{rngs::StdRng, seq::SliceRandom, thread_rng, SeedableRng};
 use tap::Tap;
 
 use super::MinoKind;
@@ -17,7 +17,7 @@ impl Default for PieceQueue {
     fn default() -> Self {
         Self {
             window: default(),
-            window_size: 7,
+            window_size: 5,
             rng: StdRng::from_rng(thread_rng()).expect("could not construct an rng"),
         }
         .tap_mut(|a| a.refill_window())
