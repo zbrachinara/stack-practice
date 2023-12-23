@@ -27,6 +27,7 @@ use bevy::{
     utils::default,
 };
 use itertools::Itertools;
+use tap::Tap;
 
 mod controller;
 mod queue;
@@ -34,7 +35,6 @@ mod queue;
 use crate::{
     assets::{
         tables::{
-            kick_table,
             shape_table::{ShapeParameters, ShapeTable},
             sprite_table::SpriteTable,
             QueryKickTable, QueryShapeTable,
@@ -92,6 +92,7 @@ pub enum RotationState {
     #[default] Up, Right, Down, Left
 }
 
+#[derive(Clone, Copy)]
 struct Mino {
     kind: MinoKind,
     position: IVec2,
@@ -131,10 +132,21 @@ impl Default for Bounds {
 #[derive(Component, Default)]
 struct Active(Option<Mino>);
 
-#[derive(Component, Default)]
+#[derive(Component)]
 struct Matrix {
     data: Vec<Vec<MinoKind>>,
     updates: Vec<MatrixUpdate>,
+}
+
+impl Default for Matrix {
+    fn default() -> Self {
+        Self {
+            data: std::iter::repeat_with(|| vec![MinoKind::E; MATRIX_DEFAULT_SIZE.x as usize])
+                .take(MATRIX_DEFAULT_SIZE.y as usize)
+                .collect(),
+            updates: Default::default(),
+        }
+    }
 }
 
 #[derive(Component)]
@@ -152,6 +164,16 @@ impl Matrix {
                 .get(ix.y as usize)
                 .and_then(|row| row.get(ix.x as usize))
                 .copied()
+        } else {
+            None
+        }
+    }
+
+    fn get_mut(&mut self, ix: IVec2) -> Option<&mut MinoKind> {
+        if ix.cmpge(ivec2(0, 0)).all() {
+            self.data
+                .get_mut(ix.y as usize)
+                .and_then(|row| row.get_mut(ix.x as usize))
         } else {
             None
         }
@@ -313,8 +335,46 @@ impl From<&Mino> for ShapeParameters {
 fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool {
     shape_table.0[&ShapeParameters::from(&mino)]
         .iter()
-        .map(|&shape_offset| shape_offset + mino.position - TEXTURE_CENTER_OFFSET)
+        .map(|&shape_offset| shape_offset + mino.position)
         .all(|position| matrix.get(position) == Some(MinoKind::E))
+}
+
+/// Lock the given piece into the matrix, at the position and rotation it comes with.
+fn lock_piece_at(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
+    let old_board = matrix.data.clone();
+
+    for &p in &shape_table.0[&ShapeParameters::from(&mino)] {
+        *(matrix.get_mut(p + mino.position).unwrap()) = mino.kind;
+    }
+
+    // TODO compute line clears
+
+    // register updates made to the board
+    let row_size = old_board[0].len();
+    let new_updates = (0..).scan(
+        (
+            -1i32,
+            old_board.into_iter().flat_map(|i| i.into_iter()),
+            matrix.data.iter().flat_map(|i| i.iter()),
+        ),
+        |(offset, old, new), _| {
+            itertools::diff_with(old.clone(), new.clone(), |a, b| a == *b).map(|d| match d {
+                itertools::Diff::FirstMismatch(p, old_next, new_next) => {
+                    *offset += p as i32 + 1;
+                    *old = old_next.into_parts().1.clone();
+                    let (Some(&kind), new_new) = new_next.into_parts() else {
+                        unreachable!()
+                    };
+                    *new = new_new;
+                    let loc = ivec2(*offset % row_size as i32, *offset / row_size as i32);
+                    MatrixUpdate { loc, kind }
+                }
+                _ => unreachable!(),
+            })
+        },
+    );
+
+    matrix.updates.extend(new_updates);
 }
 
 #[derive(WorldQuery)]
@@ -336,17 +396,25 @@ fn update_board(
     kick_table: QueryKickTable,
 ) {
     for mut board in boards.iter_mut() {
-        if controller.hard_drop {
-            todo!("Bring the piece to its lowest point, lock it, and update the board/hold/queue")
-        } else if controller.soft_drop {
-            todo!("Lower the piece by the amount specified by the gravity multiplier")
-        }
+        if let Some(mut p) = board.active.deref().0 {
+            let farthest_legal_drop = (1..)
+                .map(|o| (o, p.tap_mut(|p| p.position.y -= o)))
+                .find(|(_, mino)| !has_free_space(&board.matrix, *mino, &shape_table))
+                .map(|(o, _)| o - 1)
+                .unwrap();
 
-        if board.active.deref().0.is_none() {
+            if controller.hard_drop {
+                board.active.0.take();
+                p.position.y -= farthest_legal_drop;
+                lock_piece_at(&mut board.matrix, p, &shape_table);
+            } else if controller.soft_drop {
+                todo!("Lower the piece by the amount specified by the gravity multiplier")
+            }
+        } else {
             // TODO confirm that the piece can spawn before spawning it
             board.active.0 = Some(Mino {
                 kind: board.queue.take(),
-                position: ivec2(4, 22),
+                position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
                 rotation: RotationState::Up,
             });
         }
@@ -460,7 +528,7 @@ fn display_active(
         if let Some(piece) = e {
             *vis = Visibility::Inherited;
 
-            let offset = -(bounds.legal_bounds.as_vec2() / 2. + TEXTURE_CENTER_OFFSET.as_vec2());
+            let offset = -(bounds.legal_bounds.as_vec2() / 2.);
             let new_pos = (piece.position.as_vec2() + offset) * CELL_SIZE as f32;
             pos.translation = new_pos.extend(1.0);
 
