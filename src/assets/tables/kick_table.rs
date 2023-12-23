@@ -58,5 +58,5 @@ impl AssetLoader for KickTableLoader {
 #[derive(Resource, AssetCollection)]
 pub struct DefaultKickTable {
     #[asset(path = "default.kick-table")]
-    table: Handle<KickTable>,
+    pub(super) table: Handle<KickTable>,
 }

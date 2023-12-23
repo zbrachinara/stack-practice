@@ -33,7 +33,7 @@ mod queue;
 
 use crate::{
     assets::{
-        tables::{shape_table::ShapeParameters, sprite_table::SpriteTable},
+        tables::{shape_table::ShapeParameters, sprite_table::SpriteTable, QueryShapeTable, kick_table, QueryKickTable},
         MinoTextures,
     },
     state::MainState,
@@ -300,6 +300,8 @@ struct BoardQuery {
 fn update_board(
     mut boards: Query<BoardQuery>,
     controller: Res<Controller>,
+    shape_table: QueryShapeTable,
+    kick_table: QueryKickTable,
 ) {
     for mut board in boards.iter_mut() {
         if controller.hard_drop {

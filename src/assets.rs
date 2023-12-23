@@ -15,7 +15,7 @@ use crate::state::MainState;
 
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
-    shape_table::{ShapeTable, ShapeTableLoader},
+    shape_table::{ShapeTable, ShapeTableLoader, DefaultShapeTable},
     sprite_table::SpriteTable,
 };
 
@@ -71,6 +71,7 @@ impl Plugin for StackingAssetsPlugin {
             .init_asset_loader::<KickTableLoader>()
             .add_collection_to_loading_state::<_, MinoTextures>(MainState::Loading)
             .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading)
+            .add_collection_to_loading_state::<_, DefaultShapeTable>(MainState::Loading)
             .add_collection_to_loading_state::<_, DefaultKickTable>(MainState::Loading);
     }
 }

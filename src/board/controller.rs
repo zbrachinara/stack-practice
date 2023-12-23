@@ -71,7 +71,7 @@ pub fn process_input(keys: Res<Input<KeyCode>>, time: Res<Time>, mut controller:
     if keys.just_pressed(KeyCode::Space) {
         controller.hard_drop = true;
     }
-    if keys.just_pressed(KeyCode::S) {
+    if keys.pressed(KeyCode::S) {
         controller.soft_drop = true;
     }
     if keys.just_pressed(KeyCode::Comma) {

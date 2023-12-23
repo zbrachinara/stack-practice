@@ -1,12 +1,13 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
 use bevy::{
-    asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext},
-    ecs::system::Resource,
+    asset::{io::Reader, Asset, AssetLoader, Assets, AsyncReadExt, Handle, LoadContext},
+    ecs::system::{Res, Resource, SystemParam},
     math::{uvec2, IVec2},
     reflect::TypePath,
     utils::HashMap,
 };
+use bevy_asset_loader::asset_collection::AssetCollection;
 use futures::future::join_all;
 
 use crate::{
@@ -94,4 +95,10 @@ impl AssetLoader for ShapeTableLoader {
     fn extensions(&self) -> &[&str] {
         &["shape-table"]
     }
+}
+
+#[derive(Resource, AssetCollection)]
+pub struct DefaultShapeTable {
+    #[asset(path = "default.shape-table")]
+    pub(super) table: Handle<ShapeTable>,
 }
