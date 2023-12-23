@@ -12,8 +12,9 @@ use bevy::{
         system::{Commands, Local, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Children},
-    math::{ivec2, vec2, IVec2, UVec2},
+    math::{dvec2, ivec2, vec2, IVec2, UVec2},
     render::{
+        color::Color,
         render_resource::Extent3d,
         texture::Image,
         view::{InheritedVisibility, Visibility},
@@ -156,6 +157,8 @@ struct MatrixSprite;
 struct ActiveSprite;
 #[derive(Component)]
 struct QueueSprite(usize);
+#[derive(Component)]
+struct HoldSprite;
 
 #[derive(Debug)]
 struct MatrixUpdate {
@@ -210,6 +213,22 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         })
         .insert(ActiveSprite)
         .id();
+
+    let hold_offset =
+        MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2.0 * vec2(-1., 0.) * CELL_SIZE as f32
+            + vec2(24., 2.);
+    let hold_sprite = commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                flip_y: true,
+                anchor: Anchor::TopRight,
+                ..default()
+            },
+            transform: Transform::from_translation(hold_offset.extend(0.)),
+            ..default()
+        })
+        .insert(HoldSprite)
+        .id();
     let queue_sprites = (0..5)
         .map(|i| {
             let offset = MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2. * (CELL_SIZE as f32);
@@ -247,7 +266,10 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         textures,
     });
 
-    board.add_child(matrix_sprite).add_child(active_sprite);
+    board
+        .add_child(matrix_sprite)
+        .add_child(active_sprite)
+        .add_child(hold_sprite);
     for e in queue_sprites {
         board.add_child(e);
     }
@@ -330,8 +352,10 @@ fn redraw_board(
     }
 }
 
+type AddedOrChanged<T> = Or<(Added<T>, Changed<T>)>;
+
 fn center_board(
-    boards: Query<(&Bounds, &Children), Or<(Added<Bounds>, Changed<Bounds>)>>,
+    boards: Query<(&Bounds, &Children), AddedOrChanged<Bounds>>,
     mut sprites: Query<&mut Transform, With<MatrixSprite>>,
 ) {
     for (board, children) in boards.iter() {
@@ -349,7 +373,7 @@ fn center_board(
 /// the sprite representing it is hidden. If it is modified in any other way, the sprite's position
 /// and kind will be updated to match.
 fn display_active(
-    active: Query<(&Active, &Bounds, &Children), Or<(Added<Active>, Changed<Active>)>>,
+    active: Query<(&Active, &Bounds, &Children), AddedOrChanged<Active>>,
     mut sprites: Query<(&mut Visibility, &mut Transform, &mut Handle<Image>), With<ActiveSprite>>,
     sprite_table: Res<SpriteTable>,
 ) {
@@ -358,6 +382,8 @@ fn display_active(
         let (mut vis, mut pos, mut tex) = sprites.get_mut(active_sprite_id.unwrap()).unwrap();
 
         if let Some(piece) = e {
+            *vis = Visibility::Inherited;
+
             let offset = -(bounds.true_bounds.as_vec2() / 2. + TEXTURE_CENTER_OFFSET.as_vec2());
             let new_pos = (piece.translation.as_vec2() + offset) * CELL_SIZE as f32;
             pos.translation = new_pos.extend(1.0);
@@ -378,7 +404,7 @@ fn display_active(
 /// Updates the visual state of the piece queue. When the queue changes, each piece in the queue has
 /// its texture updated to match its intended state.
 fn display_queue(
-    queue: Query<(&PieceQueue, &Children), Or<(Added<PieceQueue>, Changed<PieceQueue>)>>,
+    queue: Query<(&PieceQueue, &Children), AddedOrChanged<PieceQueue>>,
     mut sprites: Query<(&mut Handle<Image>, &QueueSprite)>,
     sprite_table: Res<SpriteTable>,
 ) {
@@ -389,13 +415,50 @@ fn display_queue(
             .filter(|&e| sprites.contains(e))
             .collect_vec()
         {
-            println!("Called");
             let (mut tex, QueueSprite(n)) = sprites.get_mut(e).unwrap();
             let selector = ShapeParameters {
                 kind: queue.window()[*n],
                 rotation: RotationState::Up,
             };
             *tex = sprite_table.0[&selector].clone();
+        }
+    }
+}
+
+/// Displays the held piece. Greys the texture of the associated sprite if it is inactive, or keeps
+/// it at its normal color if it is not. The sprite is hidden if the hold slot is empty.
+fn display_held(
+    hold: Query<(&Hold, &Children), AddedOrChanged<Hold>>,
+    mut sprites: Query<(&mut Visibility, &mut Sprite, &mut Handle<Image>), With<HoldSprite>>,
+    sprite_table: Res<SpriteTable>,
+) {
+    for (hold, children) in hold.iter() {
+        let child = children
+            .iter()
+            .copied()
+            .find(|&c| sprites.contains(c))
+            .unwrap();
+        let (mut vis, mut spr, mut tex) = sprites.get_mut(child).unwrap();
+
+        match hold {
+            &Hold::Active(p) | &Hold::Inactive(p) => {
+                let selector = ShapeParameters {
+                    kind: p,
+                    rotation: RotationState::Up,
+                };
+                *tex = sprite_table.0[&selector].clone();
+            }
+            _ => (),
+        }
+
+        match hold {
+            Hold::Empty => {
+                *vis = Visibility::Hidden;
+            }
+            Hold::Inactive(_) => {
+                spr.color = Color::GRAY;
+            }
+            _ => (),
         }
     }
 }
@@ -421,6 +484,7 @@ impl Plugin for BoardPlugin {
                     center_board,
                     display_active,
                     display_queue,
+                    display_held,
                     redraw_board,
                 )
                     .run_if(in_state(MainState::Playing)),
