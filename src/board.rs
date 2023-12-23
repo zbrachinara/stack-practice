@@ -33,7 +33,12 @@ mod queue;
 
 use crate::{
     assets::{
-        tables::{shape_table::ShapeParameters, sprite_table::SpriteTable, QueryShapeTable, kick_table, QueryKickTable},
+        tables::{
+            kick_table,
+            shape_table::{ShapeParameters, ShapeTable},
+            sprite_table::SpriteTable,
+            QueryKickTable, QueryShapeTable,
+        },
         MinoTextures,
     },
     state::MainState,
@@ -139,6 +144,19 @@ struct BoardTextures {
 
 #[derive(Component, Default)]
 struct DropClock(f32);
+
+impl Matrix {
+    fn get(&self, ix: IVec2) -> Option<MinoKind> {
+        if ix.cmpge(ivec2(0, 0)).all() {
+            self.data
+                .get(ix.y as usize)
+                .and_then(|row| row.get(ix.x as usize))
+                .copied()
+        } else {
+            None
+        }
+    }
+}
 
 pub fn transparent_texture(size: UVec2) -> Image {
     let mut img = Image::default();
@@ -283,6 +301,20 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
     for e in queue_sprites {
         board.add_child(e);
     }
+}
+
+impl From<&Mino> for ShapeParameters {
+    fn from(&Mino { kind, rotation, .. }: &Mino) -> Self {
+        ShapeParameters { kind, rotation }
+    }
+}
+
+/// Checks if the matrix can accomodate the given piece.
+fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool {
+    shape_table.0[&ShapeParameters::from(&mino)]
+        .iter()
+        .map(|&shape_offset| shape_offset + mino.position - TEXTURE_CENTER_OFFSET)
+        .all(|position| matrix.get(position) == Some(MinoKind::E))
 }
 
 #[derive(WorldQuery)]

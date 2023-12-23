@@ -1,8 +1,8 @@
-use std::{fmt::Display, ops::Deref};
+use std::fmt::Display;
 
 use bevy::{
-    asset::{io::Reader, Asset, AssetLoader, Assets, AsyncReadExt, Handle, LoadContext},
-    ecs::system::{Res, Resource, SystemParam},
+    asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, Handle, LoadContext},
+    ecs::system::Resource,
     math::{uvec2, IVec2},
     reflect::TypePath,
     utils::HashMap,
