@@ -343,6 +343,7 @@ fn update_board(
         }
 
         if board.active.deref().0.is_none() {
+            // TODO confirm that the piece can spawn before spawning it
             board.active.0 = Some(Mino {
                 kind: board.queue.take(),
                 position: ivec2(4, 22),

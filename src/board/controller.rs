@@ -16,7 +16,7 @@ pub struct Controller {
     repeater_right: Repeatable,
 
     pub hard_drop: bool,
-    pub soft_drop: bool,
+    pub soft_drop: bool, // TODO make this repeatable
 
     /// Signals that the active piece should rotate the piece to the left. The meaning of "rotate"
     /// here is that, if the piece is embedded in a wheel (like a driving wheel), the wheel is
