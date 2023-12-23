@@ -107,6 +107,14 @@ enum Hold {
     Inactive(MinoKind),
 }
 
+impl Hold {
+    fn activate(&mut self) {
+        if let Self::Inactive(p) = self {
+            *self = Self::Active(*p);
+        }
+    }
+}
+
 const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
 const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
 /// The amount by which the spawn location of the piece is offset from the bottom left corner of its
@@ -404,7 +412,12 @@ fn update_board(
                 .unwrap();
 
             if controller.hard_drop {
+                // TODO when passive effects are added, this needs to happen when the piece locks
+                // (by gravity or otherwise), not just during hard drop
                 board.active.0.take();
+                board.drop_clock.0 = 0.0;
+                board.hold.activate();
+
                 p.position.y -= farthest_legal_drop;
                 lock_piece_at(&mut board.matrix, p, &shape_table);
             } else if controller.soft_drop {
