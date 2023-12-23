@@ -11,7 +11,7 @@ use bevy::{
         component::Component,
         query::{Added, Changed, Or, With, WorldQuery},
         schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
-        system::{Commands, Local, Query, Res, ResMut},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Children},
     math::{ivec2, vec2, IVec2, UVec2},
@@ -32,7 +32,7 @@ mod queue;
 
 use crate::{
     assets::{
-        tables::{shape_table::ShapeParameters, SpriteTable},
+        tables::{shape_table::ShapeParameters, sprite_table::SpriteTable},
         MinoTextures,
     },
     state::MainState,
@@ -139,7 +139,7 @@ struct BoardTextures {
 #[derive(Component, Default)]
 struct DropClock(f32);
 
-fn transparent_texture(size: UVec2) -> Image {
+pub fn transparent_texture(size: UVec2) -> Image {
     let mut img = Image::default();
     img.data.fill(0);
     img.resize(Extent3d {
@@ -292,7 +292,10 @@ struct BoardQuery {
 }
 
 /// Update the state of the memory-representation of the board using player input
-fn update_board(mut boards: Query<BoardQuery, AddedOrChanged<Matrix>>, controller: Res<Controller>) {
+fn update_board(
+    mut boards: Query<BoardQuery, AddedOrChanged<Matrix>>,
+    controller: Res<Controller>,
+) {
     for mut board in boards.iter_mut() {
         if controller.hard_drop {
             todo!("Bring the piece to its lowest point, lock it, and update the board/hold/queue")

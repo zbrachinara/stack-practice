@@ -16,7 +16,7 @@ use bevy::{
 };
 use itertools::{iproduct, Itertools};
 use quickstacking::{
-    assets::{tables::SpriteTable, StackingAssetsPlugin},
+    assets::{tables::sprite_table::SpriteTable, StackingAssetsPlugin},
     board::CELL_SIZE,
     state::StatePlugin,
 };
