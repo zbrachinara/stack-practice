@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use bevy::{
     app::{Plugin, PostUpdate, Update},
@@ -16,6 +16,7 @@ use bevy::{
     hierarchy::{BuildChildren, Children},
     math::{ivec2, vec2, IVec2, UVec2},
     render::{
+        camera::OrthographicProjection,
         color::Color,
         render_resource::Extent3d,
         texture::Image,
@@ -88,7 +89,7 @@ pub enum RotationState {
 
 struct Mino {
     kind: MinoKind,
-    translation: IVec2,
+    position: IVec2,
     rotation: RotationState,
 }
 
@@ -193,6 +194,10 @@ fn spawn_default_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
+fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
+    camera.single_mut().scale = 2.0;
+}
+
 fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>) {
     let textures = BoardTextures::init(MATRIX_DEFAULT_SIZE, &mut texture_server);
 
@@ -293,7 +298,7 @@ struct BoardQuery {
 
 /// Update the state of the memory-representation of the board using player input
 fn update_board(
-    mut boards: Query<BoardQuery, AddedOrChanged<Matrix>>,
+    mut boards: Query<BoardQuery>,
     controller: Res<Controller>,
 ) {
     for mut board in boards.iter_mut() {
@@ -301,6 +306,14 @@ fn update_board(
             todo!("Bring the piece to its lowest point, lock it, and update the board/hold/queue")
         } else if controller.soft_drop {
             todo!("Lower the piece by the amount specified by the gravity multiplier")
+        }
+
+        if board.active.deref().0.is_none() {
+            board.active.0 = Some(Mino {
+                kind: board.queue.take(),
+                position: ivec2(4, 22),
+                rotation: RotationState::Up,
+            });
         }
 
         if controller.rotate_180 {
@@ -412,8 +425,8 @@ fn display_active(
         if let Some(piece) = e {
             *vis = Visibility::Inherited;
 
-            let offset = -(bounds.true_bounds.as_vec2() / 2. + TEXTURE_CENTER_OFFSET.as_vec2());
-            let new_pos = (piece.translation.as_vec2() + offset) * CELL_SIZE as f32;
+            let offset = -(bounds.legal_bounds.as_vec2() / 2. + TEXTURE_CENTER_OFFSET.as_vec2());
+            let new_pos = (piece.position.as_vec2() + offset) * CELL_SIZE as f32;
             pos.translation = new_pos.extend(1.0);
 
             *tex = sprite_table.0[&ShapeParameters {
@@ -508,6 +521,7 @@ impl Plugin for BoardPlugin {
             .add_systems(
                 PostUpdate,
                 (
+                    set_camera_scale,
                     reset_controller,
                     center_board,
                     display_active,
