@@ -1,5 +1,7 @@
 #![allow(clippy::type_complexity)]
 
+use std::ops::{Deref, DerefMut};
+
 use bevy::{
     app::{Plugin, PostUpdate, Update},
     asset::{AssetPath, Assets, Handle},
@@ -7,7 +9,7 @@ use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
-        query::{Added, Changed, Or, With},
+        query::{Added, Changed, Or, With, WorldQuery},
         schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
         system::{Commands, Local, Query, Res, ResMut},
     },
@@ -124,12 +126,18 @@ impl Default for Bounds {
 struct Active(Option<Mino>);
 
 #[derive(Component, Default)]
-struct Matrix(Vec<Vec<MinoKind>>);
+struct Matrix {
+    data: Vec<Vec<MinoKind>>,
+    updates: Vec<MatrixUpdate>,
+}
 
 #[derive(Component)]
 struct BoardTextures {
     matrix_cells: Handle<Image>,
 }
+
+#[derive(Component, Default)]
+struct DropClock(f32);
 
 fn transparent_texture(size: UVec2) -> Image {
     let mut img = Image::default();
@@ -166,9 +174,6 @@ struct MatrixUpdate {
     kind: MinoKind,
 }
 
-#[derive(Default, Component)]
-struct MatrixUpdates(Vec<MatrixUpdate>);
-
 #[derive(Bundle)]
 pub struct Board {
     transform: Transform,
@@ -180,7 +185,7 @@ pub struct Board {
     active: Active,
     hold: Hold,
     queue: PieceQueue,
-    updates: MatrixUpdates,
+    drop_clock: DropClock,
     textures: BoardTextures,
 }
 
@@ -262,7 +267,7 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
         active: default(),
         hold: default(),
         queue: default(),
-        updates: default(),
+        drop_clock: default(),
         textures,
     });
 
@@ -275,36 +280,49 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
     }
 }
 
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+struct BoardQuery {
+    matrix: &'static mut Matrix,
+    active: &'static mut Active,
+    hold: &'static mut Hold,
+    queue: &'static mut PieceQueue,
+    drop_clock: &'static mut DropClock,
+    bounds: &'static Bounds,
+}
+
 /// Update the state of the memory-representation of the board using player input
-fn update_board(mut board: Query<(&mut Matrix, &mut MatrixUpdates)>, controller: Res<Controller>) {
-    if controller.hard_drop {
-        todo!()
-    } else if controller.soft_drop {
-        todo!()
-    }
+fn update_board(mut boards: Query<BoardQuery, AddedOrChanged<Matrix>>, controller: Res<Controller>) {
+    for mut board in boards.iter_mut() {
+        if controller.hard_drop {
+            todo!("Bring the piece to its lowest point, lock it, and update the board/hold/queue")
+        } else if controller.soft_drop {
+            todo!("Lower the piece by the amount specified by the gravity multiplier")
+        }
 
-    if controller.rotate_180 {
-        todo!()
-    } else if controller.rotate_left {
-        todo!()
-    } else if controller.rotate_right {
-        todo!()
-    }
+        if controller.rotate_180 {
+            todo!("Flip the piece around")
+        } else if controller.rotate_left {
+            todo!("Rotate piece to the left")
+        } else if controller.rotate_right {
+            todo!("Rotate the piece to the right")
+        }
 
-    if controller.shift_left {
-        todo!()
-    } else if controller.shift_right {
-        todo!()
-    }
+        if controller.shift_left {
+            todo!("Shift the piece one position to the left")
+        } else if controller.shift_right {
+            todo!("Shift the piece one position to the right")
+        }
 
-    if controller.repeat_left {
-        todo!()
-    } else if controller.repeat_right {
-        todo!()
-    }
+        if controller.repeat_left {
+            todo!("Shift the piece left by the amount specified by DAS")
+        } else if controller.repeat_right {
+            todo!("Shift the piece right by the amount specified by DAS")
+        }
 
-    if controller.hold {
-        todo!()
+        if controller.hold {
+            todo!("Attempt switching the active piece with the held piece")
+        }
     }
 }
 
@@ -337,21 +355,17 @@ pub(crate) fn copy_from_to(dst: &mut Image, src: &Image, location: IVec2) {
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
 fn redraw_board(
-    mut board: Query<(&BoardTextures, &mut MatrixUpdates)>,
+    mut board: Query<(&BoardTextures, &mut Matrix), AddedOrChanged<Matrix>>,
     mut texture_server: ResMut<Assets<Image>>,
     mino_textures: Res<MinoTextures>,
 ) {
-    for (textures, mut updates) in board.iter_mut() {
-        if updates.0.is_empty() {
-            continue;
-        }
-
+    for (textures, mut board) in board.iter_mut() {
         let mut image = texture_server
             .get(textures.matrix_cells.clone())
             .cloned()
             .unwrap();
 
-        for up in updates.0.drain(..) {
+        for up in board.updates.drain(..) {
             let tex = up.kind.select(&mino_textures);
             let replace_image = texture_server.get(tex).unwrap();
             copy_from_to(&mut image, replace_image, up.loc);

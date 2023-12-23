@@ -18,6 +18,10 @@ pub struct Controller {
     pub hard_drop: bool,
     pub soft_drop: bool,
 
+    /// Signals that the active piece should rotate the piece to the left. The meaning of "rotate"
+    /// here is that, if the piece is embedded in a wheel (like a driving wheel), the wheel is
+    /// rotated to the left, and the piece along with it. How exactly the piece is "embedded in that
+    /// wheel", so to speak, is encoded by the shape table.
     pub rotate_left: bool,
     pub rotate_right: bool,
     pub rotate_180: bool,
