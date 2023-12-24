@@ -437,8 +437,9 @@ struct BoardQuery {
     bounds: &'static Bounds,
 }
 
-const SOFT_DROP_SIZE: f32 = 1.5; // TODO this should be a multiplier on gravity, and not a constant
+const SOFT_DROP_POWER: f32 = 10.0; // TODO this should be a multiplier on gravity, and not a constant
 const SHIFT_SIZE: i32 = 1;
+const GRAVITY_POWER: f32 = 0.02;
 
 /// Update the state of the memory-representation of the board using player input
 fn update_board(
@@ -464,9 +465,13 @@ fn update_board(
 
                 p.position.y -= farthest_legal_drop;
                 lock_piece_at(&mut board.matrix, p, &shape_table);
-            } else if controller.soft_drop {
-                board.drop_clock.0 += SOFT_DROP_SIZE;
             }
+
+            board.drop_clock.0 += if controller.soft_drop {
+                SOFT_DROP_POWER * GRAVITY_POWER
+            } else {
+                GRAVITY_POWER
+            };
         }
 
         if board.active.deref().0.is_none() {
