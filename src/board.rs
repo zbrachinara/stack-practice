@@ -388,7 +388,15 @@ fn lock_piece_at(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
         *(matrix.get_mut(p + mino.position).unwrap()) = mino.kind;
     }
 
-    // TODO compute line clears
+    let mut real_ix = 0;
+    for _ in 0..matrix.data.len() {
+        if matrix.data[real_ix].iter().all(|&e| e != MinoKind::E) {
+            matrix.data[real_ix..].rotate_left(1);
+            matrix.data.last_mut().unwrap().fill(MinoKind::E);
+        } else {
+            real_ix += 1;
+        }
+    }
 
     // register updates made to the board
     let row_size = old_board[0].len();
