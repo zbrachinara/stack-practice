@@ -5,8 +5,9 @@ use bevy::{
         system::{Query, Res, ResMut},
     },
     hierarchy::Children,
-    render::{texture::Image, view::Visibility, color::Color},
-    transform::components::Transform, sprite::Sprite,
+    render::{color::Color, texture::Image, view::Visibility},
+    sprite::Sprite,
+    transform::components::Transform,
 };
 use itertools::Itertools;
 
@@ -16,8 +17,8 @@ use crate::assets::{
 };
 
 use super::{
-    copy_from_to, queue::PieceQueue, Active, ActiveSprite, BoardTextures, Bounds, Matrix,
-    MatrixSprite, QueueSprite, CELL_SIZE, RotationState, Hold, HoldSprite,
+    copy_from_to, queue::PieceQueue, Active, ActiveSprite, BoardTextures, Bounds, Hold, HoldSprite,
+    Matrix, MatrixSprite, QueueSprite, RotationState, CELL_SIZE,
 };
 
 type AddedOrChanged<T> = Or<(Added<T>, Changed<T>)>;
@@ -150,9 +151,19 @@ pub(super) fn display_held(
                 *vis = Visibility::Hidden;
             }
             Hold::Inactive(_) => {
-                spr.color = Color::GRAY;
+                *vis = Visibility::Inherited;
+                let greying = 0.3;
+                spr.color = Color::Rgba {
+                    red: greying,
+                    green: greying,
+                    blue: greying,
+                    alpha: 0.8,
+                };
             }
-            _ => (),
+            Hold::Active(_) => {
+                *vis = Visibility::Inherited;
+                spr.color = Color::WHITE;
+            }
         }
     }
 }
