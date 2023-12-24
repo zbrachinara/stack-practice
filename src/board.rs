@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use bevy::{
     app::{Plugin, PostUpdate, Update},
@@ -9,15 +9,14 @@ use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
-        query::{Added, Changed, Or, With, WorldQuery},
+        query::WorldQuery,
         schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
         system::{Commands, Query, Res, ResMut},
     },
-    hierarchy::{BuildChildren, Children},
+    hierarchy::BuildChildren,
     math::{ivec2, vec2, IVec2, UVec2},
     render::{
         camera::OrthographicProjection,
-        color::Color,
         render_resource::Extent3d,
         texture::Image,
         view::{InheritedVisibility, Visibility},
@@ -30,13 +29,13 @@ use itertools::Itertools;
 use tap::Tap;
 
 mod controller;
+mod display;
 mod queue;
 
 use crate::{
     assets::{
         tables::{
             shape_table::{ShapeParameters, ShapeTable},
-            sprite_table::SpriteTable,
             QueryKickTable, QueryShapeTable,
         },
         MinoTextures,
@@ -46,6 +45,7 @@ use crate::{
 
 use self::{
     controller::{process_input, reset_controller, Controller},
+    display::{center_board, display_active, display_held, display_queue, redraw_board},
     queue::PieceQueue,
 };
 
@@ -426,8 +426,8 @@ fn update_board(
             } else if controller.soft_drop {
                 board.drop_clock.0 += SOFT_DROP_SIZE;
             }
-        } 
-        
+        }
+
         if board.active.deref().0.is_none() {
             // TODO confirm that the piece can spawn before spawning it
             board.active.0 = Some(Mino {
@@ -520,143 +520,6 @@ pub(crate) fn copy_from_to(dst: &mut Image, src: &Image, location: IVec2) {
         .for_each(|(src, (a, b))| {
             dst.data[a..b].copy_from_slice(src);
         })
-}
-
-/// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
-/// each cell exists on the screen, and this system reads the currently active variant of tetromino
-/// at that location and enables the visibility of that sprite accordingly.
-fn redraw_board(
-    mut board: Query<(&BoardTextures, &mut Matrix), AddedOrChanged<Matrix>>,
-    mut texture_server: ResMut<Assets<Image>>,
-    mino_textures: Res<MinoTextures>,
-) {
-    for (textures, mut board) in board.iter_mut() {
-        let mut image = texture_server
-            .get(textures.matrix_cells.clone())
-            .cloned()
-            .unwrap();
-
-        for up in board.updates.drain(..) {
-            let tex = up.kind.select(&mino_textures);
-            let replace_image = texture_server.get(tex).unwrap();
-            copy_from_to(&mut image, replace_image, up.loc);
-        }
-
-        *texture_server
-            .get_mut(textures.matrix_cells.clone())
-            .unwrap() = image;
-    }
-}
-
-type AddedOrChanged<T> = Or<(Added<T>, Changed<T>)>;
-
-fn center_board(
-    boards: Query<(&Bounds, &Children), AddedOrChanged<Bounds>>,
-    mut sprites: Query<&mut Transform, With<MatrixSprite>>,
-) {
-    for (board, children) in boards.iter() {
-        let board_bounds = board.true_bounds.as_vec2();
-        let legal_bounds = board.legal_bounds.as_vec2();
-        let offset = (board_bounds / 2. - legal_bounds / 2.) * (CELL_SIZE as f32);
-
-        let child = *children.iter().find(|q| sprites.contains(**q)).unwrap();
-        sprites.get_mut(child).unwrap().translation = offset.extend(0.0);
-    }
-}
-
-/// Updates the visual state of the active piece. The active piece is a child of the board,
-/// initialized in the same system that spawns the board. If the active pice becomes `None`, then
-/// the sprite representing it is hidden. If it is modified in any other way, the sprite's position
-/// and kind will be updated to match.
-fn display_active(
-    active: Query<(&Active, &Bounds, &Children), AddedOrChanged<Active>>,
-    mut sprites: Query<(&mut Visibility, &mut Transform, &mut Handle<Image>), With<ActiveSprite>>,
-    sprite_table: Res<SpriteTable>,
-) {
-    for (Active(e), bounds, children) in active.iter() {
-        let active_sprite_id = children.iter().copied().find(|&c| sprites.contains(c));
-        let (mut vis, mut pos, mut tex) = sprites.get_mut(active_sprite_id.unwrap()).unwrap();
-
-        if let Some(piece) = e {
-            *vis = Visibility::Inherited;
-
-            let offset = -(bounds.legal_bounds.as_vec2() / 2.);
-            let new_pos = (piece.position.as_vec2() + offset) * CELL_SIZE as f32;
-            pos.translation = new_pos.extend(1.0);
-
-            *tex = sprite_table.0[&ShapeParameters {
-                kind: piece.kind,
-                rotation: piece.rotation,
-            }]
-                .clone();
-        } else {
-            *vis = Visibility::Hidden
-        }
-    }
-}
-
-// TODO: This function does not react to changes to queue window size
-// TODO: This function does not react to changes in matrix bounds
-/// Updates the visual state of the piece queue. When the queue changes, each piece in the queue has
-/// its texture updated to match its intended state.
-fn display_queue(
-    queue: Query<(&PieceQueue, &Children), AddedOrChanged<PieceQueue>>,
-    mut sprites: Query<(&mut Handle<Image>, &QueueSprite)>,
-    sprite_table: Res<SpriteTable>,
-) {
-    for (queue, children) in queue.iter() {
-        for e in children
-            .iter()
-            .copied()
-            .filter(|&e| sprites.contains(e))
-            .collect_vec()
-        {
-            let (mut tex, QueueSprite(n)) = sprites.get_mut(e).unwrap();
-            let selector = ShapeParameters {
-                kind: queue.window()[*n],
-                rotation: RotationState::Up,
-            };
-            *tex = sprite_table.0[&selector].clone();
-        }
-    }
-}
-
-/// Displays the held piece. Greys the texture of the associated sprite if it is inactive, or keeps
-/// it at its normal color if it is not. The sprite is hidden if the hold slot is empty.
-fn display_held(
-    hold: Query<(&Hold, &Children), AddedOrChanged<Hold>>,
-    mut sprites: Query<(&mut Visibility, &mut Sprite, &mut Handle<Image>), With<HoldSprite>>,
-    sprite_table: Res<SpriteTable>,
-) {
-    for (hold, children) in hold.iter() {
-        let child = children
-            .iter()
-            .copied()
-            .find(|&c| sprites.contains(c))
-            .unwrap();
-        let (mut vis, mut spr, mut tex) = sprites.get_mut(child).unwrap();
-
-        match hold {
-            &Hold::Active(p) | &Hold::Inactive(p) => {
-                let selector = ShapeParameters {
-                    kind: p,
-                    rotation: RotationState::Up,
-                };
-                *tex = sprite_table.0[&selector].clone();
-            }
-            _ => (),
-        }
-
-        match hold {
-            Hold::Empty => {
-                *vis = Visibility::Hidden;
-            }
-            Hold::Inactive(_) => {
-                spr.color = Color::GRAY;
-            }
-            _ => (),
-        }
-    }
 }
 
 pub struct BoardPlugin;
