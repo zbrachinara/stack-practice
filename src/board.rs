@@ -492,7 +492,21 @@ fn update_board(
         }
 
         if controller.hold {
-            todo!("Attempt switching the active piece with the held piece")
+            if let &Hold::Active(p) = board.hold.deref() {
+                *(board.hold) = Hold::Inactive(board.active.0.unwrap().kind);
+                board.active.0 = Some(Mino {
+                    kind: p,
+                    position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                    rotation: RotationState::Up,
+                });
+            } else if matches!(board.hold.deref(), Hold::Empty) {
+                *(board.hold) = Hold::Inactive(board.active.0.unwrap().kind);
+                board.active.0 = Some(Mino {
+                    kind: board.queue.take(),
+                    position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                    rotation: RotationState::Up,
+                })
+            }
         }
     }
 }
