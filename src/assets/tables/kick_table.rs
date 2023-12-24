@@ -12,9 +12,9 @@ use crate::board::{MinoKind, RotationState};
 #[derive(serde::Deserialize, PartialEq, Eq, Hash)]
 #[serde(from = "(MinoKind, RotationState, RotationState)")]
 pub struct KickParameters {
-    kind: MinoKind,
-    from: RotationState,
-    to: RotationState,
+    pub kind: MinoKind,
+    pub from: RotationState,
+    pub to: RotationState,
 }
 
 impl From<(MinoKind, RotationState, RotationState)> for KickParameters {
@@ -24,7 +24,7 @@ impl From<(MinoKind, RotationState, RotationState)> for KickParameters {
 }
 
 #[derive(serde::Deserialize, Asset, TypePath)]
-pub struct KickTable(HashMap<KickParameters, Vec<IVec2>>);
+pub struct KickTable(pub HashMap<KickParameters, Vec<IVec2>>);
 
 #[derive(Default)]
 pub struct KickTableLoader;

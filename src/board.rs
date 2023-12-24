@@ -35,6 +35,7 @@ mod queue;
 use crate::{
     assets::{
         tables::{
+            kick_table::KickParameters,
             shape_table::{ShapeParameters, ShapeTable},
             QueryKickTable, QueryShapeTable,
         },
@@ -90,6 +91,38 @@ impl MinoKind {
 #[rustfmt::skip]
 pub enum RotationState {
     #[default] Up, Right, Down, Left
+}
+
+impl RotationState {
+    fn rotate_180(self) -> Self {
+        use RotationState::*;
+        match self {
+            Up => Down,
+            Right => Left,
+            Down => Up,
+            Left => Right,
+        }
+    }
+
+    fn rotate_left(self) -> Self {
+        use RotationState::*;
+        match self {
+            Up => Left,
+            Right => Up,
+            Down => Right,
+            Left => Down,
+        }
+    }
+
+    fn rotate_right(self) -> Self {
+        use RotationState::*;
+        match self {
+            Up => Right,
+            Right => Down,
+            Down => Left,
+            Left => Up,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -457,12 +490,40 @@ fn update_board(
             board.active.0.as_mut().unwrap().position.y -= drop_distance;
         }
 
-        if controller.rotate_180 {
-            todo!("Flip the piece around")
+        let mino = board.active.0.unwrap();
+        let original_rotation = mino.rotation;
+        let rotation = if controller.rotate_180 {
+            Some(original_rotation.rotate_180())
         } else if controller.rotate_left {
-            todo!("Rotate piece to the left")
+            Some(original_rotation.rotate_left())
         } else if controller.rotate_right {
-            todo!("Rotate the piece to the right")
+            Some(original_rotation.rotate_right())
+        } else {
+            None
+        };
+
+        if let Some(new_rotation) = rotation {
+            let kick_params = KickParameters {
+                kind: mino.kind,
+                from: original_rotation,
+                to: new_rotation,
+            };
+            let kicks = kick_table.0.get(&kick_params);
+            let offsets =
+                std::iter::once(ivec2(0, 0)).chain(kicks.iter().flat_map(|p| p.iter()).copied());
+
+            let successful_rot = offsets
+                .map(|o| {
+                    mino.tap_mut(|m| {
+                        m.rotation = new_rotation;
+                        m.position += o;
+                    })
+                })
+                .find(|m| has_free_space(board.matrix.deref(), *m, &shape_table));
+
+            if let Some(successful_rot) = successful_rot {
+                board.active.0 = Some(successful_rot);
+            }
         }
 
         let mino = board.active.deref().0.unwrap();
