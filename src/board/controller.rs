@@ -32,27 +32,46 @@ pub struct Controller {
 const REPEAT_START_DELAY: Duration = Duration::from_millis(2000);
 const REPEAT_DELAY: Duration = Duration::from_millis(100);
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 struct Repeatable {
     repeat_at: Option<Duration>,
+    initial_delay: Duration,
+    repeat_delay: Duration,
+}
+
+impl Default for Repeatable {
+    fn default() -> Self {
+        Self {
+            repeat_at: None,
+            initial_delay: REPEAT_START_DELAY,
+            repeat_delay: REPEAT_DELAY,
+        }
+    }
 }
 
 impl Repeatable {
+    fn initial_delay(&self) -> Duration {
+        if self.initial_delay.is_zero() {
+            self.repeat_delay
+        } else {
+            self.initial_delay
+        }
+    }
+
     fn update(&mut self, time: &Res<Time>, activation: bool) -> (bool, bool) {
         if activation {
             if let Some(time_to_repeat) = self.repeat_at {
                 if time_to_repeat < time.elapsed() {
                     tracing::debug!("registered a repeat activation");
                     let now = time.elapsed();
-                    // self.repeat_activation = true;
-                    self.repeat_at = Some(now + REPEAT_DELAY);
+                    self.repeat_at = Some(now + self.repeat_delay);
                     return (false, true);
                 }
             } else {
                 // key has been pressed for the first time
                 tracing::debug!("registered a single activation");
                 let now = time.elapsed();
-                self.repeat_at = Some(now + REPEAT_START_DELAY);
+                self.repeat_at = Some(now + self.initial_delay());
                 return (true, false);
             }
         } else {
@@ -65,7 +84,11 @@ impl Repeatable {
 }
 
 /// Turns raw kb input into controller input which directly maps to actions on the board
-pub fn process_input(keys: Res<Input<KeyCode>>, time: Res<Time>, mut controller: ResMut<Controller>) {
+pub fn process_input(
+    keys: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    mut controller: ResMut<Controller>,
+) {
     tracing::debug_span!(module_path!());
 
     if keys.just_pressed(KeyCode::Space) {

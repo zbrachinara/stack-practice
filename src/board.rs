@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use bevy::{
     app::{Plugin, PostUpdate, Update},
@@ -396,6 +396,8 @@ struct BoardQuery {
     bounds: &'static Bounds,
 }
 
+const SOFT_DROP_SIZE: f32 = 1.5; // TODO this should be a multiplier on gravity, and not a constant
+
 /// Update the state of the memory-representation of the board using player input
 fn update_board(
     mut boards: Query<BoardQuery>,
@@ -421,7 +423,7 @@ fn update_board(
                 p.position.y -= farthest_legal_drop;
                 lock_piece_at(&mut board.matrix, p, &shape_table);
             } else if controller.soft_drop {
-                todo!("Lower the piece by the amount specified by the gravity multiplier")
+                board.drop_clock.0 += SOFT_DROP_SIZE;
             }
         } else {
             // TODO confirm that the piece can spawn before spawning it
@@ -449,7 +451,7 @@ fn update_board(
         } else if old_drop_clock > 1.0 {
             board.drop_clock.0 = old_drop_clock.fract();
             let drop_distance = std::cmp::min(old_drop_clock.trunc() as i32, farthest_legal_drop);
-            board.active.0.unwrap().position.y -= drop_distance;
+            board.active.0.as_mut().unwrap().position.y -= drop_distance;
         }
 
         if controller.rotate_180 {
