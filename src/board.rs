@@ -426,7 +426,9 @@ fn update_board(
             } else if controller.soft_drop {
                 board.drop_clock.0 += SOFT_DROP_SIZE;
             }
-        } else {
+        } 
+        
+        if board.active.deref().0.is_none() {
             // TODO confirm that the piece can spawn before spawning it
             board.active.0 = Some(Mino {
                 kind: board.queue.take(),
