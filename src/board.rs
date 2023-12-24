@@ -397,6 +397,7 @@ struct BoardQuery {
 }
 
 const SOFT_DROP_SIZE: f32 = 1.5; // TODO this should be a multiplier on gravity, and not a constant
+const SHIFT_SIZE: i32 = 1;
 
 /// Update the state of the memory-representation of the board using player input
 fn update_board(
@@ -462,16 +463,30 @@ fn update_board(
             todo!("Rotate the piece to the right")
         }
 
-        if controller.shift_left {
-            todo!("Shift the piece one position to the left")
+        let mino = board.active.deref().0.unwrap();
+        let farthest_shift_left = (1..)
+            .map(|o| (o, mino.tap_mut(|p| p.position.x -= o)))
+            .find(|(_, mino)| !has_free_space(&board.matrix, *mino, &shape_table))
+            .map(|(o, _)| o - 1)
+            .unwrap();
+        let farthest_shift_right = (1..)
+            .map(|o| (o, mino.tap_mut(|p| p.position.x += o)))
+            .find(|(_, mino)| !has_free_space(&board.matrix, *mino, &shape_table))
+            .map(|(o, _)| o - 1)
+            .unwrap();
+        let shift_size = if controller.shift_left {
+            -std::cmp::min(1, farthest_shift_left)
         } else if controller.shift_right {
-            todo!("Shift the piece one position to the right")
-        }
-
-        if controller.repeat_left {
-            todo!("Shift the piece left by the amount specified by DAS")
+            std::cmp::min(1, farthest_shift_right)
+        } else if controller.repeat_left {
+            -std::cmp::min(SHIFT_SIZE, farthest_shift_left)
         } else if controller.repeat_right {
-            todo!("Shift the piece right by the amount specified by DAS")
+            std::cmp::min(SHIFT_SIZE, farthest_shift_right)
+        } else {
+            0
+        };
+        if shift_size != 0 {
+            board.active.0.as_mut().unwrap().position.x += shift_size;
         }
 
         if controller.hold {
