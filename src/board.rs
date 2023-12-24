@@ -432,6 +432,26 @@ fn update_board(
             });
         }
 
+        let mino = board.active.deref().0.unwrap();
+        let farthest_legal_drop = (1..)
+            .map(|o| (o, mino.tap_mut(|p| p.position.y -= o)))
+            .find(|(_, mino)| !has_free_space(&board.matrix, *mino, &shape_table))
+            .map(|(o, _)| o - 1)
+            .unwrap();
+
+        let old_drop_clock = board.drop_clock.deref().0;
+        // The drop clock should only either drop the piece or lock it, NOT BOTH. This is so
+        // that the player has time to interact with the piece when it hits the bottom, for a
+        // frame at the very least. Later, we may want to rethink this for zero lock delay, if
+        // such a thing makes sense.
+        if farthest_legal_drop == 0 {
+            // TODO lock delay
+        } else if old_drop_clock > 1.0 {
+            board.drop_clock.0 = old_drop_clock.fract();
+            let drop_distance = std::cmp::min(old_drop_clock.trunc() as i32, farthest_legal_drop);
+            board.active.0.unwrap().position.y -= drop_distance;
+        }
+
         if controller.rotate_180 {
             todo!("Flip the piece around")
         } else if controller.rotate_left {
