@@ -135,15 +135,12 @@ pub(super) fn display_held(
             .unwrap();
         let (mut vis, mut spr, mut tex) = sprites.get_mut(child).unwrap();
 
-        match hold {
-            &Hold::Active(p) | &Hold::Inactive(p) => {
-                let selector = ShapeParameters {
-                    kind: p,
-                    rotation: RotationState::Up,
-                };
-                *tex = sprite_table.0[&selector].clone();
-            }
-            _ => (),
+        if let &Hold::Active(p) | &Hold::Inactive(p) = hold {
+            let selector = ShapeParameters {
+                kind: p,
+                rotation: RotationState::Up,
+            };
+            *tex = sprite_table.0[&selector].clone();
         }
 
         match hold {
