@@ -187,7 +187,10 @@ struct BoardTextures {
 }
 
 #[derive(Component, Default)]
-struct DropClock(f32);
+struct DropClock {
+    fall: f32,
+    lock: f32,
+}
 
 impl Matrix {
     fn get(&self, ix: IVec2) -> Option<MinoKind> {

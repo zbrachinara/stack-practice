@@ -6,6 +6,7 @@ use bevy::{
         system::{Query, Res},
     },
     math::ivec2,
+    utils::default,
 };
 use tap::Tap;
 
@@ -202,6 +203,7 @@ pub(super) struct BoardQuery {
 const SOFT_DROP_POWER: f32 = 10.0;
 const SHIFT_SIZE: i32 = 1;
 const GRAVITY_POWER: f32 = 0.02;
+const LOCK_DELAY: f32 = 0.5;
 
 /// Update the state of the memory-representation of the board using player input
 pub(super) fn update_board(
@@ -219,7 +221,7 @@ pub(super) fn update_board(
                 // TODO when passive effects are added, this needs to happen when the piece locks
                 // (by gravity or otherwise), not just during hard drop
                 board.active.0.take();
-                board.drop_clock.0 = 0.0;
+                *board.drop_clock = default();
                 board.hold.activate();
 
                 p.position.y -= farthest_legal_drop;
@@ -240,22 +242,28 @@ pub(super) fn update_board(
             board.active().tap_mut(|p| p.position.y -= y)
         });
 
-        board.drop_clock.0 += if controller.soft_drop {
-            SOFT_DROP_POWER * GRAVITY_POWER
-        } else {
-            GRAVITY_POWER
-        };
-        let old_drop_clock = board.drop_clock.deref().0;
         // The drop clock should only either drop the piece or lock it, NOT BOTH. This is so
         // that the player has time to interact with the piece when it hits the bottom, for a
         // frame at the very least. Later, we may want to rethink this for zero lock delay, if
         // such a thing makes sense.
         if farthest_legal_drop == 0 {
-            // TODO lock delay
-        } else if old_drop_clock > 1.0 {
-            board.drop_clock.0 = old_drop_clock.fract();
-            let drop_distance = std::cmp::min(old_drop_clock.trunc() as i32, farthest_legal_drop);
-            board.active_mut().position.y -= drop_distance;
+            board.drop_clock.lock += 1. / 60.;
+            if board.drop_clock.lock > LOCK_DELAY {
+                // TODO perform lock
+            }
+        } else {
+            board.drop_clock.fall += if controller.soft_drop {
+                SOFT_DROP_POWER * GRAVITY_POWER
+            } else {
+                GRAVITY_POWER
+            };
+            let old_drop_clock = board.drop_clock.deref().fall;
+            if old_drop_clock > 1.0 {
+                board.drop_clock.fall = old_drop_clock.fract();
+                let drop_distance =
+                    std::cmp::min(old_drop_clock.trunc() as i32, farthest_legal_drop);
+                board.active_mut().position.y -= drop_distance;
+            }
         }
 
         board.do_rotate(&controller, &kick_table, &shape_table);
