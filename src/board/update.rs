@@ -10,7 +10,7 @@ use bevy::{
 use tap::Tap;
 
 use crate::assets::tables::{
-    kick_table::KickParameters,
+    kick_table::{KickParameters, KickTable},
     shape_table::{ShapeParameters, ShapeTable},
     QueryKickTable, QueryShapeTable,
 };
@@ -95,6 +95,76 @@ impl<'world> BoardQueryItem<'world> {
             .unwrap()
     }
 
+    /// If the controller requests that the active piece is shifted, the piece will be shifted and
+    /// marked as modified.
+    fn do_shift(&mut self, controller: &Controller, shape_table: &ShapeTable) {
+        let farthest_shift_left = self.maximum_for_which(shape_table, |x| {
+            self.active().tap_mut(|p| p.position.x -= x)
+        });
+
+        let farthest_shift_right = self.maximum_for_which(shape_table, |x| {
+            self.active().tap_mut(|p| p.position.x += x)
+        });
+
+        let shift_size = if controller.shift_left {
+            -std::cmp::min(1, farthest_shift_left)
+        } else if controller.shift_right {
+            std::cmp::min(1, farthest_shift_right)
+        } else if controller.repeat_left {
+            -std::cmp::min(SHIFT_SIZE, farthest_shift_left)
+        } else if controller.repeat_right {
+            std::cmp::min(SHIFT_SIZE, farthest_shift_right)
+        } else {
+            0
+        };
+
+        if shift_size != 0 {
+            self.active_mut().position.x += shift_size;
+        }
+    }
+
+    fn do_rotate(
+        &mut self,
+        controller: &Controller,
+        kick_table: &KickTable,
+        shape_table: &ShapeTable,
+    ) {
+        let original_rotation = self.active().rotation;
+        let rotation = if controller.rotate_180 {
+            Some(original_rotation.rotate_180())
+        } else if controller.rotate_left {
+            Some(original_rotation.rotate_left())
+        } else if controller.rotate_right {
+            Some(original_rotation.rotate_right())
+        } else {
+            None
+        };
+
+        if let Some(new_rotation) = rotation {
+            let kick_params = KickParameters {
+                kind: self.active().kind,
+                from: original_rotation,
+                to: new_rotation,
+            };
+            let kicks = kick_table.0.get(&kick_params);
+            let offsets =
+                std::iter::once(ivec2(0, 0)).chain(kicks.iter().flat_map(|p| p.iter()).copied());
+
+            let successful_rot = offsets
+                .map(|o| {
+                    self.active().tap_mut(|m| {
+                        m.rotation = new_rotation;
+                        m.position += o;
+                    })
+                })
+                .find(|m| has_free_space(self.matrix.deref(), *m, shape_table));
+
+            if let Some(successful_rot) = successful_rot {
+                *self.active_mut() = successful_rot;
+            }
+        }
+    }
+
     /// Switches the held piece and the active piece, if it is allowed. By this point, the active
     /// piece must exist.
     fn switch_hold_active(&mut self) {
@@ -155,12 +225,6 @@ pub(super) fn update_board(
                 p.position.y -= farthest_legal_drop;
                 lock_piece_at(&mut board.matrix, p, &shape_table);
             }
-
-            board.drop_clock.0 += if controller.soft_drop {
-                SOFT_DROP_POWER * GRAVITY_POWER
-            } else {
-                GRAVITY_POWER
-            };
         }
 
         if board.active.deref().0.is_none() {
@@ -176,6 +240,11 @@ pub(super) fn update_board(
             board.active().tap_mut(|p| p.position.y -= y)
         });
 
+        board.drop_clock.0 += if controller.soft_drop {
+            SOFT_DROP_POWER * GRAVITY_POWER
+        } else {
+            GRAVITY_POWER
+        };
         let old_drop_clock = board.drop_clock.deref().0;
         // The drop clock should only either drop the piece or lock it, NOT BOTH. This is so
         // that the player has time to interact with the piece when it hits the bottom, for a
@@ -189,63 +258,8 @@ pub(super) fn update_board(
             board.active_mut().position.y -= drop_distance;
         }
 
-        let mino = board.active.0.unwrap();
-        let original_rotation = mino.rotation;
-        let rotation = if controller.rotate_180 {
-            Some(original_rotation.rotate_180())
-        } else if controller.rotate_left {
-            Some(original_rotation.rotate_left())
-        } else if controller.rotate_right {
-            Some(original_rotation.rotate_right())
-        } else {
-            None
-        };
-
-        if let Some(new_rotation) = rotation {
-            let kick_params = KickParameters {
-                kind: mino.kind,
-                from: original_rotation,
-                to: new_rotation,
-            };
-            let kicks = kick_table.0.get(&kick_params);
-            let offsets =
-                std::iter::once(ivec2(0, 0)).chain(kicks.iter().flat_map(|p| p.iter()).copied());
-
-            let successful_rot = offsets
-                .map(|o| {
-                    mino.tap_mut(|m| {
-                        m.rotation = new_rotation;
-                        m.position += o;
-                    })
-                })
-                .find(|m| has_free_space(board.matrix.deref(), *m, &shape_table));
-
-            if let Some(successful_rot) = successful_rot {
-                *board.active_mut() = successful_rot;
-            }
-        }
-
-        let farthest_shift_left = board.maximum_for_which(&shape_table, |x| {
-            board.active().tap_mut(|p| p.position.x -= x)
-        });
-        let farthest_shift_right = board.maximum_for_which(&shape_table, |x| {
-            board.active().tap_mut(|p| p.position.x += x)
-        });
-        let shift_size = if controller.shift_left {
-            -std::cmp::min(1, farthest_shift_left)
-        } else if controller.shift_right {
-            std::cmp::min(1, farthest_shift_right)
-        } else if controller.repeat_left {
-            -std::cmp::min(SHIFT_SIZE, farthest_shift_left)
-        } else if controller.repeat_right {
-            std::cmp::min(SHIFT_SIZE, farthest_shift_right)
-        } else {
-            0
-        };
-        if shift_size != 0 {
-            board.active_mut().position.x += shift_size;
-        }
-
+        board.do_rotate(&controller, &kick_table, &shape_table);
+        board.do_shift(&controller, &shape_table);
         if controller.hold {
             board.switch_hold_active();
         }
