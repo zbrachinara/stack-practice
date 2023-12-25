@@ -295,7 +295,7 @@ fn spawn_board(
 
     let hold_offset =
         MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2.0 * vec2(-1., 1.) * CELL_SIZE as f32
-            + vec2(24., 2.);
+            - vec2(24., 2.);
     let hold_sprite = commands
         .spawn(SpriteBundle {
             sprite: Sprite {
