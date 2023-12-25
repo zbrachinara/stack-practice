@@ -2,6 +2,8 @@ use std::ops::Deref;
 
 use bevy::{
     ecs::{
+        entity::Entity,
+        event::{Event, EventReader, EventWriter},
         query::WorldQuery,
         system::{Query, Res},
     },
@@ -29,8 +31,11 @@ fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool
         .all(|position| matrix.get(position) == Some(MinoKind::E))
 }
 
-/// Lock the given piece into the matrix, at the position and rotation it comes with.
-fn lock_piece_at(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
+/// Lock the given piece into the matrix, at the position and rotation it comes with. If there were
+/// any filled cells that take up the same space as the given mino, those cells are overwritten with
+/// the new piece. Line clears are also applied to the matrix, and any updates to the texture of the
+/// matrix are also registered.
+fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
     let old_board = matrix.data.clone();
 
     for &p in &shape_table.0[&ShapeParameters::from(&mino)] {
@@ -180,6 +185,7 @@ impl<'world> BoardQueryItem<'world> {
         };
 
         if let Some(kind) = replace_active {
+            // TODO confirm that the piece can spawn before spawning it
             self.active.0 = Some(Mino {
                 kind,
                 position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
@@ -198,6 +204,7 @@ pub(super) struct BoardQuery {
     queue: &'static mut PieceQueue,
     drop_clock: &'static mut DropClock,
     bounds: &'static Bounds,
+    id: Entity,
 }
 
 const SOFT_DROP_POWER: f32 = 10.0;
@@ -205,37 +212,59 @@ const SHIFT_SIZE: i32 = 1;
 const GRAVITY_POWER: f32 = 0.02;
 const LOCK_DELAY: f32 = 0.5;
 
+#[derive(Event, Clone, Copy, Debug)]
+pub struct PieceSpawnEvent {
+    pub board: Entity,
+    pub(super) mino: Mino,
+}
+
+pub(super) fn spawn_piece(
+    mut events: EventReader<PieceSpawnEvent>,
+    mut boards: Query<BoardQuery>,
+    shape_table: QueryShapeTable,
+) {
+    for &PieceSpawnEvent { board, mino } in events.read() {
+        println!("spawning {mino:?}");
+        let mut board = boards.get_mut(board).unwrap();
+        if has_free_space(&board.matrix, mino, &shape_table) {
+            *board.drop_clock = default();
+            board.hold.activate();
+            board.active.0 = Some(mino);
+        } else {
+            todo!("Change state to a transient losing state, or send a lose event")
+        }
+    }
+}
+
 /// Update the state of the memory-representation of the board using player input
 pub(super) fn update_board(
     mut boards: Query<BoardQuery>,
+    mut spawner: EventWriter<PieceSpawnEvent>,
     controller: Res<Controller>,
     shape_table: QueryShapeTable,
     kick_table: QueryKickTable,
 ) {
     for mut board in boards.iter_mut() {
-        if let Some(mut p) = board.active.deref().0 {
-            let farthest_legal_drop =
-                board.maximum_for_which(&shape_table, |y| p.tap_mut(|p| p.position.y -= y));
-
-            if controller.hard_drop {
-                // TODO when passive effects are added, this needs to happen when the piece locks
-                // (by gravity or otherwise), not just during hard drop
-                board.active.0.take();
-                *board.drop_clock = default();
-                board.hold.activate();
-
-                p.position.y -= farthest_legal_drop;
-                lock_piece_at(&mut board.matrix, p, &shape_table);
-            }
+        if board.active.deref().0.is_none() {
+            continue;
         }
 
-        if board.active.deref().0.is_none() {
-            // TODO confirm that the piece can spawn before spawning it
-            board.active.0 = Some(Mino {
-                kind: board.queue.take(),
-                position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
-                rotation: RotationState::Up,
+        if controller.hard_drop {
+            let mut active = board.active();
+            let farthest_legal_drop = board.maximum_for_which(&shape_table, |y| {
+                board.active().tap_mut(|p| p.position.y -= y)
             });
+            active.position.y -= farthest_legal_drop;
+            lock_piece(&mut board.matrix, active, &shape_table);
+            spawner.send(PieceSpawnEvent {
+                board: board.id,
+                mino: Mino {
+                    kind: board.queue.take(),
+                    position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                    rotation: RotationState::Up,
+                },
+            });
+            continue;
         }
 
         let farthest_legal_drop = board.maximum_for_which(&shape_table, |y| {
@@ -249,7 +278,17 @@ pub(super) fn update_board(
         if farthest_legal_drop == 0 {
             board.drop_clock.lock += 1. / 60.;
             if board.drop_clock.lock > LOCK_DELAY {
-                // TODO perform lock
+                let active = board.active();
+                lock_piece(&mut board.matrix, active, &shape_table);
+                spawner.send(PieceSpawnEvent {
+                    board: board.id,
+                    mino: Mino {
+                        kind: board.queue.take(),
+                        position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                        rotation: RotationState::Up,
+                    },
+                });
+                continue;
             }
         } else {
             board.drop_clock.fall += if controller.soft_drop {

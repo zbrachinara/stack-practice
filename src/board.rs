@@ -1,17 +1,22 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::{
-    app::{Plugin, PostUpdate, Update},
+    app::{Plugin, PostUpdate, Startup, Update},
     asset::{AssetPath, Assets, Handle},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         bundle::Bundle,
         component::Component,
+        entity::Entity,
+        event::EventWriter,
+        query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
-        system::{Commands, Query, ResMut},
+        system::{Commands, Query, Res, ResMut, Resource, SystemId},
+        world::World,
     },
     hierarchy::BuildChildren,
     math::{ivec2, vec2, IVec2, UVec2},
+    prelude::Deref,
     render::{
         camera::OrthographicProjection,
         render_resource::Extent3d,
@@ -38,7 +43,7 @@ use self::{
     controller::{process_input, reset_controller, Controller},
     display::{center_board, display_active, display_held, display_queue, redraw_board},
     queue::PieceQueue,
-    update::update_board,
+    update::{spawn_piece, update_board, PieceSpawnEvent},
 };
 
 #[derive(Debug, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy)]
@@ -116,7 +121,7 @@ impl RotationState {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Mino {
     kind: MinoKind,
     position: IVec2,
@@ -273,7 +278,11 @@ fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
     camera.single_mut().scale = 2.0;
 }
 
-fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>) {
+fn spawn_board(
+    mut commands: Commands,
+    mut texture_server: ResMut<Assets<Image>>,
+    start_game: Res<StartGame>,
+) {
     let textures = BoardTextures::init(MATRIX_DEFAULT_SIZE, &mut texture_server);
 
     let matrix_sprite = commands
@@ -358,6 +367,32 @@ fn spawn_board(mut commands: Commands, mut texture_server: ResMut<Assets<Image>>
     for e in queue_sprites {
         board.add_child(e);
     }
+
+    commands.run_system(**start_game);
+}
+
+#[derive(Resource, Deref)]
+struct StartGame(SystemId);
+
+fn register_start_game(w: &mut World) {
+    let id = w.register_system(start_game);
+    w.insert_resource(StartGame(id))
+}
+
+fn start_game(
+    mut boards: Query<(Entity, &mut PieceQueue), With<Matrix>>,
+    mut commands: EventWriter<PieceSpawnEvent>,
+) {
+    for (board, mut queue) in boards.iter_mut() {
+        commands.send(PieceSpawnEvent {
+            board,
+            mino: Mino {
+                kind: queue.take(),
+                position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                rotation: RotationState::Up,
+            },
+        });
+    }
 }
 
 impl From<&Mino> for ShapeParameters {
@@ -396,13 +431,19 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Controller::default())
+            .add_event::<PieceSpawnEvent>()
+            .add_systems(Startup, register_start_game)
             .add_systems(
                 OnEnter(MainState::Playing),
                 (spawn_board, spawn_default_camera),
             )
             .add_systems(
                 Update,
-                (process_input, update_board.after(process_input))
+                (
+                    process_input,
+                    spawn_piece,
+                    update_board.after(process_input),
+                )
                     .run_if(in_state(MainState::Playing)),
             )
             .add_systems(
