@@ -17,8 +17,8 @@ use crate::assets::{
 };
 
 use super::{
-    copy_from_to, queue::PieceQueue, Active, ActiveSprite, BoardTextures, Bounds, Hold, HoldSprite,
-    Matrix, MatrixSprite, QueueSprite, RotationState, CELL_SIZE,
+    copy_from_to, queue::PieceQueue, Active, ActiveSprite, Bounds, Hold, HoldSprite, Matrix,
+    MatrixSprite, QueueSprite, RotationState, CELL_SIZE,
 };
 
 type AddedOrChanged<T> = Or<(Added<T>, Changed<T>)>;
@@ -27,15 +27,15 @@ type AddedOrChanged<T> = Or<(Added<T>, Changed<T>)>;
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
 pub(super) fn redraw_board(
-    mut board: Query<(&BoardTextures, &mut Matrix), AddedOrChanged<Matrix>>,
+    mut board: Query<(&mut Matrix, &Children), AddedOrChanged<Matrix>>,
+    children: Query<&Handle<Image>, With<MatrixSprite>>,
     mut texture_server: ResMut<Assets<Image>>,
     mino_textures: Res<MinoTextures>,
 ) {
-    for (textures, mut board) in board.iter_mut() {
-        let mut image = texture_server
-            .get(textures.matrix_cells.clone())
-            .cloned()
-            .unwrap();
+    for (mut board, ch) in board.iter_mut() {
+        let texture_id = ch.iter().find_map(|c| children.get(*c).ok()).unwrap();
+
+        let mut image = texture_server.get(texture_id).cloned().unwrap();
 
         for up in board.updates.drain(..) {
             let tex = up.kind.select(&mino_textures);
@@ -43,9 +43,7 @@ pub(super) fn redraw_board(
             copy_from_to(&mut image, replace_image, up.loc);
         }
 
-        *texture_server
-            .get_mut(textures.matrix_cells.clone())
-            .unwrap() = image;
+        *texture_server.get_mut(texture_id).unwrap() = image;
     }
 }
 

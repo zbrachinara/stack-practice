@@ -186,11 +186,6 @@ impl Default for Matrix {
     }
 }
 
-#[derive(Component)]
-struct BoardTextures {
-    matrix_cells: Handle<Image>,
-}
-
 #[derive(Component, Default)]
 struct DropClock {
     fall: f32,
@@ -231,15 +226,6 @@ pub fn transparent_texture(size: UVec2) -> Image {
     img
 }
 
-impl BoardTextures {
-    /// Initialize textures representing an empty board
-    fn init(dimensions: IVec2, image_server: &mut Assets<Image>) -> Self {
-        let matrix_cells = transparent_texture(dimensions.as_uvec2() * CELL_SIZE);
-        let matrix_cells = image_server.add(matrix_cells);
-        Self { matrix_cells }
-    }
-}
-
 #[derive(Component)]
 struct MatrixSprite;
 #[derive(Component)]
@@ -255,7 +241,7 @@ struct MatrixUpdate {
     kind: MinoKind,
 }
 
-#[derive(Bundle)]
+#[derive(Bundle, Default)]
 pub struct Board {
     transform: Transform,
     global_transform: GlobalTransform,
@@ -267,7 +253,6 @@ pub struct Board {
     hold: Hold,
     queue: PieceQueue,
     drop_clock: DropClock,
-    textures: BoardTextures,
 }
 
 fn spawn_default_camera(mut commands: Commands) {
@@ -283,11 +268,11 @@ fn spawn_board(
     mut texture_server: ResMut<Assets<Image>>,
     start_game: Res<StartGame>,
 ) {
-    let textures = BoardTextures::init(MATRIX_DEFAULT_SIZE, &mut texture_server);
-
     let matrix_sprite = commands
         .spawn(SpriteBundle {
-            texture: textures.matrix_cells.clone(),
+            texture: texture_server.add(transparent_texture(
+                MATRIX_DEFAULT_SIZE.as_uvec2() * CELL_SIZE,
+            )),
             sprite: Sprite {
                 flip_y: true,
                 ..default()
@@ -346,19 +331,7 @@ fn spawn_board(
         })
         .collect_vec();
 
-    let mut board = commands.spawn(Board {
-        transform: default(),
-        global_transform: default(),
-        visibility: default(),
-        inherited_visibility: default(),
-        matrix: default(),
-        bounds: default(),
-        active: default(),
-        hold: default(),
-        queue: default(),
-        drop_clock: default(),
-        textures,
-    });
+    let mut board = commands.spawn(Board::default());
 
     board
         .add_child(matrix_sprite)
