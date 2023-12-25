@@ -224,7 +224,6 @@ pub(super) fn spawn_piece(
     shape_table: QueryShapeTable,
 ) {
     for &PieceSpawnEvent { board, mino } in events.read() {
-        println!("spawning {mino:?}");
         let mut board = boards.get_mut(board).unwrap();
         if has_free_space(&board.matrix, mino, &shape_table) {
             *board.drop_clock = default();
