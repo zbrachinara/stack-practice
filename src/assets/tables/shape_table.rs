@@ -12,7 +12,8 @@ use futures::future::join_all;
 
 use crate::{
     assets::tables::all_shape_parameters,
-    board::{copy_from_to, transparent_texture, MinoKind, RotationState, CELL_SIZE},
+    board::{MinoKind, RotationState, CELL_SIZE},
+    image_tools::{copy_from_to, transparent_texture},
 };
 
 #[derive(serde::Deserialize, PartialEq, Eq, Hash, Clone, Copy, Debug)]
