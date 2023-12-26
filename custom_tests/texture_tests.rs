@@ -9,7 +9,7 @@ use bevy::{
     DefaultPlugins,
 };
 
-use quickstacking::assets::{MinoTextures, StackingAssetsPlugin};
+use stack_practice::assets::{MinoTextures, StackingAssetsPlugin};
 
 fn display_each_texture(
     mut commands: Commands,

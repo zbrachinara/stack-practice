@@ -5,7 +5,7 @@ use bevy::{
     DefaultPlugins,
 };
 
-use quickstacking::*;
+use stack_practice::*;
 
 fn main() {
     App::new()
