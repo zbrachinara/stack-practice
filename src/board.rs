@@ -19,10 +19,11 @@ use bevy::{
     prelude::Deref,
     render::{
         camera::OrthographicProjection,
+        color::Color,
         texture::Image,
         view::{InheritedVisibility, Visibility},
     },
-    sprite::{Anchor, Sprite, SpriteBundle},
+    sprite::{Anchor, Material2dPlugin, Sprite, SpriteBundle},
     transform::components::{GlobalTransform, Transform},
     utils::default,
 };
@@ -30,6 +31,7 @@ use itertools::Itertools;
 
 mod controller;
 mod display;
+mod drop_shadow;
 mod queue;
 mod update;
 
@@ -42,6 +44,7 @@ use crate::{
 use self::{
     controller::{process_input, reset_controller, Controller},
     display::{center_board, display_active, display_held, display_queue, redraw_board},
+    drop_shadow::{spawn_drop_shadow, update_drop_shadow, DropShadowMaterial},
     queue::PieceQueue,
     update::{spawn_piece, update_board, PieceSpawnEvent},
 };
@@ -79,6 +82,20 @@ impl MinoKind {
             MinoKind::I => "minos/I.png".into(),
             MinoKind::G => "minos/G.png".into(),
             MinoKind::E => "minos/E.png".into(),
+        }
+    }
+
+    pub fn color(&self) -> Color {
+        match self {
+            MinoKind::T => Color::PURPLE,
+            MinoKind::O => Color::YELLOW,
+            MinoKind::L => Color::ORANGE,
+            MinoKind::J => Color::BLUE,
+            MinoKind::S => Color::LIME_GREEN,
+            MinoKind::Z => Color::RED,
+            MinoKind::I => Color::AQUAMARINE,
+            MinoKind::G => todo!(),
+            MinoKind::E => todo!(),
         }
     }
 }
@@ -368,6 +385,7 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Controller::default())
+            .add_plugins(Material2dPlugin::<DropShadowMaterial>::default())
             .add_event::<PieceSpawnEvent>()
             .add_systems(Startup, register_start_game)
             .add_systems(
@@ -377,6 +395,7 @@ impl Plugin for BoardPlugin {
             .add_systems(
                 Update,
                 (
+                    spawn_drop_shadow,
                     process_input,
                     spawn_piece,
                     update_board.after(process_input),
@@ -390,6 +409,7 @@ impl Plugin for BoardPlugin {
                     reset_controller,
                     center_board,
                     display_active,
+                    update_drop_shadow,
                     display_queue,
                     display_held,
                     redraw_board,
