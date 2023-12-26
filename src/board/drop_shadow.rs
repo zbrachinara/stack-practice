@@ -24,11 +24,6 @@ use crate::assets::tables::{shape_table::ShapeParameters, QueryShapeTable};
 
 use super::{Active, Matrix, CELL_SIZE, MATRIX_DEFAULT_LEGAL_BOUNDS};
 
-#[derive(Component)]
-pub struct DropShadowMesh {
-    image: Handle<Image>,
-}
-
 #[derive(Clone, TypePath, Asset, AsBindGroup)]
 pub struct DropShadowMaterial {
     #[texture(1, dimension = "1d")]
@@ -83,7 +78,6 @@ pub(super) fn spawn_drop_shadow(
                 ),
                 ..default()
             })
-            .insert(DropShadowMesh { image })
             .id();
 
         commands.entity(b).add_child(q);
@@ -92,23 +86,23 @@ pub(super) fn spawn_drop_shadow(
 
 pub(super) fn update_drop_shadow(
     active: Query<(&Active, &Children), Or<(Added<Active>, Changed<Active>)>>,
-    mat: Query<&DropShadowMesh>,
+    mat: Query<&Handle<DropShadowMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    mut mats: ResMut<Assets<DropShadowMaterial>>,
     shape_table: QueryShapeTable,
 ) {
     for (active, children) in active.iter() {
         if let Some(active) = active.0 {
             let child = children.iter().find_map(|e| mat.get(*e).ok()).unwrap();
-            let image = images.get_mut(child.image.clone()).unwrap();
+            let material = mats.get_mut(child).unwrap();
+            let image = images.get_mut(material.base.clone()).unwrap();
 
             let contained: HashSet<_> = shape_table.0[&ShapeParameters::from(&active)]
                 .iter()
                 .map(|&p| (p + active.position).x as usize)
-                .inspect(|x| println!("highlighting x position {x}"))
                 .collect();
 
             for (i, chunk) in image.data.chunks_mut(4).enumerate() {
-                println!("chunk filled");
                 let fill = if contained.contains(&i) {
                     active.kind.color()
                 } else {
@@ -116,7 +110,6 @@ pub(super) fn update_drop_shadow(
                 };
                 chunk.copy_from_slice(&fill.as_rgba_u8());
             }
-            println!("{:?}", image.data);
         }
     }
 }
