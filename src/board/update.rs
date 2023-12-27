@@ -102,8 +102,8 @@ impl<'world> BoardQueryItem<'world> {
     }
 
     /// If the controller requests that the active piece is shifted, the piece will be shifted and
-    /// marked as modified.
-    fn do_shift(&mut self, controller: &Controller, shape_table: &ShapeTable) {
+    /// marked as modified. Returns true if the shift was successful.
+    fn do_shift(&mut self, controller: &Controller, shape_table: &ShapeTable) -> bool {
         let farthest_shift_left = self.maximum_for_which(shape_table, |x| {
             self.active().tap_mut(|p| p.position.x -= x)
         });
@@ -126,6 +126,9 @@ impl<'world> BoardQueryItem<'world> {
 
         if shift_size != 0 {
             self.active_mut().position.x += shift_size;
+            true
+        } else {
+            false
         }
     }
 
@@ -134,7 +137,7 @@ impl<'world> BoardQueryItem<'world> {
         controller: &Controller,
         kick_table: &KickTable,
         shape_table: &ShapeTable,
-    ) {
+    ) -> bool {
         let original_rotation = self.active().rotation;
         let rotation = if controller.rotate_180 {
             Some(original_rotation.rotate_180())
@@ -167,8 +170,11 @@ impl<'world> BoardQueryItem<'world> {
 
             if let Some(successful_rot) = successful_rot {
                 *self.active_mut() = successful_rot;
+                return true;
             }
         }
+
+        false
     }
 
     /// Switches the held piece and the active piece, if it is allowed. By this point, the active
@@ -295,8 +301,14 @@ pub(super) fn update_board(
             }
         }
 
-        board.do_rotate(&controller, &kick_table, &shape_table);
-        board.do_shift(&controller, &shape_table);
+        let rotation_success = board.do_rotate(&controller, &kick_table, &shape_table);
+        let shift_success = board.do_shift(&controller, &shape_table);
+
+        if rotation_success || shift_success {
+            // TODO also modify a lock reset counter
+            board.drop_clock.lock = 0.0;
+        }
+
         if controller.hold {
             if let Some(replace) = board.switch_hold_active() {
                 spawner.send(PieceSpawnEvent {
