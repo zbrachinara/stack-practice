@@ -1,11 +1,5 @@
-use bevy::{
-    app::{Plugin, PostUpdate, Update},
-    ecs::{
-        query::{Added, Changed, Or},
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
-    },
-    sprite::Material2dPlugin,
-};
+use bevy::prelude::*;
+use bevy::{ecs::schedule::ScheduleLabel, sprite::Material2dPlugin};
 
 use crate::state::MainState;
 
@@ -25,14 +19,25 @@ mod hold;
 mod matrix;
 mod queue;
 
+#[derive(ScheduleLabel, Hash, Debug, PartialEq, Eq, Clone)]
+pub struct SpawnDisplayEntities;
+#[derive(ScheduleLabel, Hash, Debug, PartialEq, Eq, Clone)]
+pub struct UpdateDisplayEntities;
+
+fn display_schedule(world: &mut World) {
+    world.run_schedule(SpawnDisplayEntities);
+    world.run_schedule(UpdateDisplayEntities);
+}
+
 pub struct BoardDisplayPlugin;
 
 impl Plugin for BoardDisplayPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugins(Material2dPlugin::<DropShadowMaterial>::default())
-            .add_systems(Update, spawn_drop_shadow)
+            .add_systems(PostUpdate, display_schedule)
+            .add_systems(SpawnDisplayEntities, spawn_drop_shadow)
             .add_systems(
-                PostUpdate,
+                UpdateDisplayEntities,
                 (
                     update_drop_shadow,
                     center_board,
@@ -41,7 +46,7 @@ impl Plugin for BoardDisplayPlugin {
                     display_held,
                     redraw_board,
                 )
-                    .run_if(in_state(MainState::Playing)),
+                    .run_if(not(in_state(MainState::Loading))),
             );
     }
 }

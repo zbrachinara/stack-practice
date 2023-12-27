@@ -1,23 +1,10 @@
-use bevy::{
-    asset::{Asset, Assets, Handle},
-    ecs::{
-        entity::Entity,
-        query::{Added, Changed, Or},
-        system::{Commands, Query, ResMut},
-    },
-    hierarchy::{BuildChildren, Children},
-    math::{vec3, Vec2},
-    reflect::TypePath,
-    render::{
-        color::Color,
-        mesh::{shape, Mesh},
-        render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat},
-        texture::Image,
-    },
-    sprite::{Material2d, MaterialMesh2dBundle},
-    transform::components::Transform,
-    utils::{default, hashbrown::HashSet},
+use bevy::math::vec3;
+use bevy::prelude::*;
+use bevy::render::render_resource::{
+    AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat,
 };
+use bevy::sprite::{Material2d, MaterialMesh2dBundle};
+use bevy::utils::HashSet;
 
 use crate::assets::tables::{shape_table::ShapeParameters, QueryShapeTable};
 
