@@ -43,7 +43,8 @@ use crate::{
 
 use self::{
     controller::{process_input, reset_controller, Controller},
-    display::{center_board, display_active, display_held, display_queue, redraw_board},
+    display::BoardDisplayPlugin,
+    // display::{display_active, display_held, display_queue, redraw_board},
     drop_shadow::{spawn_drop_shadow, update_drop_shadow, DropShadowMaterial},
     queue::PieceQueue,
     update::{spawn_piece, update_board, PieceSpawnEvent},
@@ -385,7 +386,10 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Controller::default())
-            .add_plugins(Material2dPlugin::<DropShadowMaterial>::default())
+            .add_plugins((
+                Material2dPlugin::<DropShadowMaterial>::default(),
+                BoardDisplayPlugin,
+            ))
             .add_event::<PieceSpawnEvent>()
             .add_systems(Startup, register_start_game)
             .add_systems(
@@ -404,16 +408,7 @@ impl Plugin for BoardPlugin {
             )
             .add_systems(
                 PostUpdate,
-                (
-                    set_camera_scale,
-                    reset_controller,
-                    center_board,
-                    display_active,
-                    update_drop_shadow,
-                    display_queue,
-                    display_held,
-                    redraw_board,
-                )
+                (set_camera_scale, reset_controller, update_drop_shadow)
                     .run_if(in_state(MainState::Playing)),
             );
     }

@@ -1,7 +1,6 @@
 use bevy::{
     asset::{Asset, Assets, Handle},
     ecs::{
-        component::Component,
         entity::Entity,
         query::{Added, Changed, Or},
         system::{Commands, Query, ResMut},
