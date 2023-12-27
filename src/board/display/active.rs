@@ -1,11 +1,32 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::Anchor};
 
 use crate::{
     assets::tables::{shape_table::ShapeParameters, sprite_table::SpriteTable},
-    board::{Active, ActiveSprite, Bounds, CELL_SIZE},
+    board::{Active, Bounds, CELL_SIZE},
 };
 
 use super::AddedOrChanged;
+
+#[derive(Component)]
+pub struct ActiveSprite;
+
+pub(super) fn spawn_active_sprite(mut commands: Commands, boards: Query<Entity, Added<Active>>) {
+    for e in boards.iter() {
+        let active_sprite = commands
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    flip_y: true,
+                    anchor: Anchor::BottomLeft,
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(ActiveSprite)
+            .id();
+
+        commands.entity(e).add_child(active_sprite);
+    }
+}
 
 /// Updates the visual state of the active piece. The active piece is a child of the board,
 /// initialized in the same system that spawns the board. If the active pice becomes `None`, then

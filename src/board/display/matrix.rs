@@ -2,11 +2,38 @@ use bevy::prelude::*;
 
 use crate::{
     assets::MinoTextures,
-    board::{Bounds, Matrix, MatrixSprite, CELL_SIZE},
-    image_tools::copy_from_to,
+    board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE},
+    image_tools::{copy_from_to, transparent_texture},
 };
 
 use super::AddedOrChanged;
+
+#[derive(Component)]
+pub struct MatrixSprite;
+
+pub(super) fn spawn_matrix_sprite(
+    mut commands: Commands,
+    boards: Query<Entity, Added<Matrix>>,
+    mut texture_server: ResMut<Assets<Image>>,
+) {
+    for e in boards.iter() {
+        let matrix_sprite = commands
+            .spawn(SpriteBundle {
+                texture: texture_server.add(transparent_texture(
+                    MATRIX_DEFAULT_SIZE.as_uvec2() * CELL_SIZE,
+                )),
+                sprite: Sprite {
+                    flip_y: true,
+                    ..default()
+                },
+                ..default()
+            })
+            .insert(MatrixSprite)
+            .id();
+
+        commands.entity(e).add_child(matrix_sprite);
+    }
+}
 
 /// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
@@ -32,6 +59,7 @@ pub(super) fn redraw_board(
     }
 }
 
+/// Centers the legal part of the matrix rather than the entire matrix.
 pub(super) fn center_board(
     boards: Query<(&Bounds, &Children), AddedOrChanged<Bounds>>,
     mut sprites: Query<&mut Transform, With<MatrixSprite>>,

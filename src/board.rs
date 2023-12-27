@@ -2,7 +2,7 @@
 
 use bevy::{
     app::{Plugin, PostUpdate, Startup, Update},
-    asset::{AssetPath, Assets, Handle},
+    asset::{AssetPath, Handle},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         bundle::Bundle,
@@ -11,11 +11,10 @@ use bevy::{
         event::EventWriter,
         query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
-        system::{Commands, Query, Res, ResMut, Resource, SystemId},
+        system::{Commands, Query, Res, Resource, SystemId},
         world::World,
     },
-    hierarchy::BuildChildren,
-    math::{ivec2, vec2, IVec2},
+    math::{ivec2, IVec2},
     prelude::Deref,
     render::{
         camera::OrthographicProjection,
@@ -23,29 +22,22 @@ use bevy::{
         texture::Image,
         view::{InheritedVisibility, Visibility},
     },
-    sprite::{Anchor, Material2dPlugin, Sprite, SpriteBundle},
     transform::components::{GlobalTransform, Transform},
-    utils::default,
 };
-use itertools::Itertools;
 
 mod controller;
 mod display;
-// mod floor;
 mod queue;
 mod update;
 
 use crate::{
     assets::{tables::shape_table::ShapeParameters, MinoTextures},
-    image_tools::transparent_texture,
     state::MainState,
 };
 
 use self::{
     controller::{process_input, reset_controller, Controller},
     display::BoardDisplayPlugin,
-    // display::{display_active, display_held, display_queue, redraw_board},
-    // floor::{spawn_drop_shadow, update_drop_shadow, DropShadowMaterial},
     queue::PieceQueue,
     update::{spawn_piece, update_board, PieceSpawnEvent},
 };
@@ -233,15 +225,6 @@ impl Matrix {
     }
 }
 
-#[derive(Component)]
-struct MatrixSprite;
-#[derive(Component)]
-struct ActiveSprite;
-#[derive(Component)]
-struct QueueSprite(usize);
-#[derive(Component)]
-struct HoldSprite;
-
 #[derive(Debug)]
 struct MatrixUpdate {
     loc: IVec2,
@@ -270,84 +253,8 @@ fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
     camera.single_mut().scale = 2.0;
 }
 
-fn spawn_board(
-    mut commands: Commands,
-    mut texture_server: ResMut<Assets<Image>>,
-    start_game: Res<StartGame>,
-) {
-    let matrix_sprite = commands
-        .spawn(SpriteBundle {
-            texture: texture_server.add(transparent_texture(
-                MATRIX_DEFAULT_SIZE.as_uvec2() * CELL_SIZE,
-            )),
-            sprite: Sprite {
-                flip_y: true,
-                ..default()
-            },
-            ..default()
-        })
-        .insert(MatrixSprite)
-        .id();
-    let active_sprite = commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                flip_y: true,
-                anchor: Anchor::BottomLeft,
-                ..default()
-            },
-            ..default()
-        })
-        .insert(ActiveSprite)
-        .id();
-
-    let hold_offset =
-        MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2.0 * vec2(-1., 1.) * CELL_SIZE as f32
-            - vec2(24., 2.);
-    let hold_sprite = commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                flip_y: true,
-                anchor: Anchor::TopRight,
-                ..default()
-            },
-            transform: Transform::from_translation(hold_offset.extend(0.)),
-            ..default()
-        })
-        .insert(HoldSprite)
-        .id();
-    let queue_sprites = (0..5)
-        .map(|i| {
-            let offset = MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2. * (CELL_SIZE as f32);
-            let space_horiz = vec2(24., 2.);
-            let space_vert = vec2(0., -(CELL_SIZE as f32 * 4.));
-
-            let transform = (offset + space_horiz + ((i + 1) as f32) * space_vert).extend(0.);
-
-            commands
-                .spawn(SpriteBundle {
-                    sprite: Sprite {
-                        flip_y: true,
-                        anchor: Anchor::BottomLeft,
-                        ..default()
-                    },
-                    transform: Transform::from_translation(transform),
-                    ..default()
-                })
-                .insert(QueueSprite(i))
-                .id()
-        })
-        .collect_vec();
-
-    let mut board = commands.spawn(Board::default());
-
-    board
-        .add_child(matrix_sprite)
-        .add_child(active_sprite)
-        .add_child(hold_sprite);
-    for e in queue_sprites {
-        board.add_child(e);
-    }
-
+fn spawn_board(mut commands: Commands, start_game: Res<StartGame>) {
+    commands.spawn(Board::default());
     commands.run_system(**start_game);
 }
 

@@ -1,12 +1,45 @@
-use bevy::prelude::*;
+use bevy::{math::vec2, prelude::*, sprite::Anchor};
 use itertools::Itertools;
 
 use crate::{
     assets::tables::{shape_table::ShapeParameters, sprite_table::SpriteTable},
-    board::{queue::PieceQueue, QueueSprite, RotationState},
+    board::{queue::PieceQueue, RotationState, CELL_SIZE, MATRIX_DEFAULT_LEGAL_BOUNDS},
 };
 
 use super::AddedOrChanged;
+
+#[derive(Component)]
+pub struct QueueSprite(usize);
+
+pub(super) fn spawn_queue_sprite(mut commands: Commands, boards: Query<Entity, Added<PieceQueue>>) {
+    let offset = MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2. * (CELL_SIZE as f32);
+    let space_horiz = vec2(24., 2.);
+    let space_vert = vec2(0., -(CELL_SIZE as f32 * 4.));
+
+    for e in boards.iter() {
+        let queue_sprites = (0..5)
+            .map(|i| {
+                let transform = (offset + space_horiz + ((i + 1) as f32) * space_vert).extend(0.);
+                commands
+                    .spawn(SpriteBundle {
+                        sprite: Sprite {
+                            flip_y: true,
+                            anchor: Anchor::BottomLeft,
+                            ..default()
+                        },
+                        transform: Transform::from_translation(transform),
+                        ..default()
+                    })
+                    .insert(QueueSprite(i))
+                    .id()
+            })
+            .collect_vec();
+
+        for s in queue_sprites {
+            commands.entity(e).add_child(s);
+        }
+    }
+}
 
 // TODO: This function does not react to changes to queue window size
 // TODO: This function does not react to changes in matrix bounds
