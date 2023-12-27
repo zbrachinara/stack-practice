@@ -142,14 +142,14 @@ struct Mino {
 enum Hold {
     #[default]
     Empty,
-    Active(MinoKind),
+    Ready(MinoKind),
     Inactive(MinoKind),
 }
 
 impl Hold {
     fn activate(&mut self) {
         if let Self::Inactive(p) = self {
-            *self = Self::Active(*p);
+            *self = Self::Ready(*p);
         }
     }
 }

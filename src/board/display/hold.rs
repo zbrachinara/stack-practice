@@ -47,7 +47,7 @@ pub(super) fn display_held(
             .unwrap();
         let (mut vis, mut spr, mut tex) = sprites.get_mut(child).unwrap();
 
-        if let &Hold::Active(p) | &Hold::Inactive(p) = hold {
+        if let &Hold::Ready(p) | &Hold::Inactive(p) = hold {
             let selector = ShapeParameters {
                 kind: p,
                 rotation: RotationState::Up,
@@ -69,7 +69,7 @@ pub(super) fn display_held(
                     alpha: 0.8,
                 };
             }
-            Hold::Active(_) => {
+            Hold::Ready(_) => {
                 *vis = Visibility::Inherited;
                 spr.color = Color::WHITE;
             }

@@ -180,7 +180,7 @@ impl<'world> BoardQueryItem<'world> {
     /// Switches the held piece and the active piece, if it is allowed. By this point, the active
     /// piece must exist.
     fn switch_hold_active(&mut self) -> Option<MinoKind> {
-        if let &Hold::Active(p) = self.hold.deref() {
+        if let &Hold::Ready(p) = self.hold.deref() {
             *(self.hold) = Hold::Inactive(self.active().kind);
             Some(p)
         } else if matches!(self.hold.deref(), Hold::Empty) {
@@ -224,7 +224,6 @@ pub(super) fn spawn_piece(
         let mut board = boards.get_mut(board).unwrap();
         if has_free_space(&board.matrix, mino, &shape_table) {
             *board.drop_clock = default();
-            board.hold.activate();
             board.active.0 = Some(mino);
         } else {
             todo!("Change state to a transient losing state, or send a lose event")
@@ -260,6 +259,7 @@ pub(super) fn update_board(
                     rotation: RotationState::Up,
                 },
             });
+            board.hold.activate();
             continue;
         }
 
@@ -276,6 +276,7 @@ pub(super) fn update_board(
             if board.drop_clock.lock > LOCK_DELAY {
                 let active = board.active();
                 lock_piece(&mut board.matrix, active, &shape_table);
+                board.hold.activate();
                 spawner.send(PieceSpawnEvent {
                     board: board.id,
                     mino: Mino {
