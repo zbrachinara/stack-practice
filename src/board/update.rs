@@ -173,8 +173,8 @@ impl<'world> BoardQueryItem<'world> {
 
     /// Switches the held piece and the active piece, if it is allowed. By this point, the active
     /// piece must exist.
-    fn switch_hold_active(&mut self) {
-        let replace_active = if let &Hold::Active(p) = self.hold.deref() {
+    fn switch_hold_active(&mut self) -> Option<MinoKind> {
+        if let &Hold::Active(p) = self.hold.deref() {
             *(self.hold) = Hold::Inactive(self.active().kind);
             Some(p)
         } else if matches!(self.hold.deref(), Hold::Empty) {
@@ -182,15 +182,6 @@ impl<'world> BoardQueryItem<'world> {
             Some(self.queue.take())
         } else {
             None
-        };
-
-        if let Some(kind) = replace_active {
-            // TODO confirm that the piece can spawn before spawning it
-            self.active.0 = Some(Mino {
-                kind,
-                position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
-                rotation: RotationState::Up,
-            })
         }
     }
 }
@@ -307,7 +298,16 @@ pub(super) fn update_board(
         board.do_rotate(&controller, &kick_table, &shape_table);
         board.do_shift(&controller, &shape_table);
         if controller.hold {
-            board.switch_hold_active();
+            if let Some(replace) = board.switch_hold_active() {
+                spawner.send(PieceSpawnEvent {
+                    board: board.id,
+                    mino: Mino {
+                        kind: replace,
+                        position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                        rotation: RotationState::Up,
+                    },
+                })
+            }
         }
     }
 }
