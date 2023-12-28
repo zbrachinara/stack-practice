@@ -88,6 +88,9 @@ impl<'world> BoardQueryItem<'world> {
     fn active_mut(&mut self) -> &mut Mino {
         self.active.0.as_mut().unwrap()
     }
+    fn take_active(&mut self) -> Mino {
+        self.active.0.take().unwrap()
+    }
 
     // TODO documentation, make this function more transparent
     fn maximum_for_which<F>(&self, table: &ShapeTable, mut f: F) -> i32
@@ -181,10 +184,10 @@ impl<'world> BoardQueryItem<'world> {
     /// piece must exist.
     fn switch_hold_active(&mut self) -> Option<MinoKind> {
         if let &Hold::Ready(p) = self.hold.deref() {
-            *(self.hold) = Hold::Inactive(self.active().kind);
+            *(self.hold) = Hold::Inactive(self.take_active().kind);
             Some(p)
         } else if matches!(self.hold.deref(), Hold::Empty) {
-            *(self.hold) = Hold::Inactive(self.active().kind);
+            *(self.hold) = Hold::Inactive(self.take_active().kind);
             Some(self.queue.take())
         } else {
             None
@@ -245,9 +248,9 @@ pub(super) fn update_board(
         }
 
         if controller.hard_drop {
-            let mut active = board.active();
+            let mut active = board.take_active();
             let farthest_legal_drop = board.maximum_for_which(&shape_table, |y| {
-                board.active().tap_mut(|p| p.position.y -= y)
+                active.tap_mut(|p| p.position.y -= y)
             });
             active.position.y -= farthest_legal_drop;
             lock_piece(&mut board.matrix, active, &shape_table);
@@ -274,7 +277,7 @@ pub(super) fn update_board(
         if farthest_legal_drop == 0 {
             board.drop_clock.lock += 1. / 60.;
             if board.drop_clock.lock > LOCK_DELAY {
-                let active = board.active();
+                let active = board.take_active();
                 lock_piece(&mut board.matrix, active, &shape_table);
                 board.hold.activate();
                 spawner.send(PieceSpawnEvent {

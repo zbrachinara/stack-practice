@@ -10,7 +10,10 @@ use bevy::{
         entity::Entity,
         event::EventWriter,
         query::With,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
+        schedule::{
+            common_conditions::{in_state, on_event},
+            IntoSystemConfigs, OnEnter,
+        },
         system::{Commands, Query, Res, Resource, SystemId},
         world::World,
     },
@@ -304,7 +307,7 @@ impl Plugin for BoardPlugin {
                 Update,
                 (
                     process_input,
-                    spawn_piece,
+                    spawn_piece.run_if(on_event::<PieceSpawnEvent>()),
                     update_board.after(process_input),
                 )
                     .run_if(in_state(MainState::Playing)),
