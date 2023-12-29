@@ -16,6 +16,7 @@ fn main() {
             }),
             assets::StackingAssetsPlugin,
             board::BoardPlugin,
+            state::StatePlugin,
         ))
         .run();
 }

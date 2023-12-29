@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::{
-    app::{Plugin, PostUpdate, Startup, Update, Last},
+    app::{Last, Plugin, PostUpdate, Startup, Update},
     asset::{AssetPath, Handle},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
@@ -11,7 +11,7 @@ use bevy::{
         event::EventWriter,
         query::With,
         schedule::{
-            common_conditions::{in_state, on_event},
+            common_conditions::{in_state, on_event, resource_exists},
             IntoSystemConfigs, OnEnter,
         },
         system::{Commands, Query, Res, Resource, SystemId},
@@ -25,6 +25,7 @@ use bevy::{
         texture::Image,
         view::{InheritedVisibility, Visibility},
     },
+    time::Time,
     transform::components::{GlobalTransform, Transform},
 };
 
@@ -43,6 +44,7 @@ use self::{
     controller::{process_input, reset_controller, Controller},
     display::BoardDisplayPlugin,
     queue::PieceQueue,
+    record::{discretized_time, record, FirstFrame, Record},
     update::{spawn_piece, update_board, PieceSpawnEvent},
 };
 
@@ -142,7 +144,7 @@ struct Mino {
     rotation: RotationState,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone, Copy, Debug)]
 enum Hold {
     #[default]
     Empty,
@@ -229,7 +231,7 @@ impl Matrix {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct MatrixUpdate {
     loc: IVec2,
     kind: MinoKind,
@@ -257,8 +259,9 @@ fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
     camera.single_mut().scale = 2.0;
 }
 
-fn spawn_board(mut commands: Commands, start_game: Res<StartGame>) {
+fn spawn_board(mut commands: Commands, start_game: Res<StartGame>, time: Res<Time>) {
     commands.spawn(Board::default());
+    commands.insert_resource(FirstFrame(discretized_time(&time)));
     commands.run_system(**start_game);
 }
 
@@ -302,7 +305,8 @@ pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Controller::default())
+        app.init_resource::<Controller>()
+            .init_resource::<Record>()
             .add_plugins(BoardDisplayPlugin)
             .add_event::<PieceSpawnEvent>()
             .add_systems(Startup, register_start_game)
@@ -321,7 +325,12 @@ impl Plugin for BoardPlugin {
             )
             .add_systems(
                 PostUpdate,
-                (set_camera_scale, reset_controller).run_if(in_state(MainState::Playing)),
+                (
+                    set_camera_scale,
+                    reset_controller,
+                    record.run_if(resource_exists::<FirstFrame>()),
+                )
+                    .run_if(in_state(MainState::Playing)),
             )
             .add_systems(Last, clear_update_queue);
     }

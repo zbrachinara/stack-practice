@@ -20,7 +20,7 @@ use crate::assets::tables::{
 
 use super::{
     controller::Controller, queue::PieceQueue, Active, Bounds, DropClock, Hold, Matrix,
-    MatrixUpdate, Mino, MinoKind, RotationState, TEXTURE_CENTER_OFFSET,
+    MatrixUpdate, Mino, MinoKind, RotationState, TEXTURE_CENTER_OFFSET, record::Record,
 };
 
 /// Checks if the matrix can accomodate the given piece.
@@ -222,6 +222,7 @@ pub(super) fn spawn_piece(
     mut events: EventReader<PieceSpawnEvent>,
     mut boards: Query<BoardQuery>,
     shape_table: QueryShapeTable,
+    record: Option<Res<Record>>,
 ) {
     for &PieceSpawnEvent { board, mino } in events.read() {
         let mut board = boards.get_mut(board).unwrap();
@@ -229,6 +230,7 @@ pub(super) fn spawn_piece(
             *board.drop_clock = default();
             board.active.0 = Some(mino);
         } else {
+            println!("{record:?}");
             todo!("Change state to a transient losing state, or send a lose event")
         }
     }
