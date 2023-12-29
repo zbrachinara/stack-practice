@@ -32,6 +32,7 @@ mod controller;
 mod display;
 mod queue;
 mod update;
+mod record;
 
 use crate::{
     assets::{tables::shape_table::ShapeParameters, MinoTextures},
