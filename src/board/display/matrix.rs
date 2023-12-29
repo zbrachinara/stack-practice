@@ -39,17 +39,17 @@ pub(super) fn spawn_matrix_sprite(
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
 pub(super) fn redraw_board(
-    mut board: Query<(&mut Matrix, &Children), AddedOrChanged<Matrix>>,
+    board: Query<(&Matrix, &Children), AddedOrChanged<Matrix>>,
     children: Query<&Handle<Image>, With<MatrixSprite>>,
     mut texture_server: ResMut<Assets<Image>>,
     mino_textures: Res<MinoTextures>,
 ) {
-    for (mut board, ch) in board.iter_mut() {
+    for (board, ch) in board.iter() {
         let texture_id = ch.iter().find_map(|c| children.get(*c).ok()).unwrap();
 
         let mut image = texture_server.get(texture_id).cloned().unwrap();
 
-        for up in board.updates.drain(..) {
+        for up in board.updates.iter() {
             let tex = up.kind.select(&mino_textures);
             let replace_image = texture_server.get(tex).unwrap();
             copy_from_to(&mut image, replace_image, up.loc);

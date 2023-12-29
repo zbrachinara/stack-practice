@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::{
-    app::{Plugin, PostUpdate, Startup, Update},
+    app::{Plugin, PostUpdate, Startup, Update, Last},
     asset::{AssetPath, Handle},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
@@ -31,8 +31,8 @@ use bevy::{
 mod controller;
 mod display;
 mod queue;
-mod update;
 mod record;
+mod update;
 
 use crate::{
     assets::{tables::shape_table::ShapeParameters, MinoTextures},
@@ -262,6 +262,12 @@ fn spawn_board(mut commands: Commands, start_game: Res<StartGame>) {
     commands.run_system(**start_game);
 }
 
+fn clear_update_queue(mut boards: Query<&mut Matrix>) {
+    for mut board in boards.iter_mut() {
+        board.updates.clear();
+    }
+}
+
 #[derive(Resource, Deref)]
 struct StartGame(SystemId);
 
@@ -316,6 +322,7 @@ impl Plugin for BoardPlugin {
             .add_systems(
                 PostUpdate,
                 (set_camera_scale, reset_controller).run_if(in_state(MainState::Playing)),
-            );
+            )
+            .add_systems(Last, clear_update_queue);
     }
 }
