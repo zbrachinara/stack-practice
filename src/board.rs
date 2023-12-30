@@ -28,6 +28,7 @@ use bevy::{
     time::Time,
     transform::components::{GlobalTransform, Transform},
 };
+use smart_default::SmartDefault;
 
 mod controller;
 mod display;
@@ -237,6 +238,18 @@ struct MatrixUpdate {
     kind: MinoKind,
 }
 
+#[derive(Component, SmartDefault)]
+struct Settings {
+    #[default = 10.0]
+    soft_drop_power: f32,
+    #[default = 1]
+    shift_size: i32,
+    #[default = 0.02]
+    gravity_power: f32,
+    #[default = 0.5]
+    lock_delay: f32,
+}
+
 #[derive(Bundle, Default)]
 pub struct Board {
     transform: Transform,
@@ -249,6 +262,7 @@ pub struct Board {
     hold: Hold,
     queue: PieceQueue,
     drop_clock: DropClock,
+    settings: Settings,
 }
 
 fn spawn_default_camera(mut commands: Commands) {

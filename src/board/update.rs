@@ -1,15 +1,7 @@
 use std::ops::Deref;
 
-use bevy::{
-    ecs::{
-        entity::Entity,
-        event::{Event, EventReader, EventWriter},
-        query::WorldQuery,
-        system::{Query, Res},
-    },
-    math::ivec2,
-    utils::default,
-};
+use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, math::ivec2};
 use tap::Tap;
 
 use crate::assets::tables::{
@@ -19,8 +11,8 @@ use crate::assets::tables::{
 };
 
 use super::{
-    controller::Controller, queue::PieceQueue, Active, Bounds, DropClock, Hold, Matrix,
-    MatrixUpdate, Mino, MinoKind, RotationState, TEXTURE_CENTER_OFFSET, record::Record,
+    controller::Controller, queue::PieceQueue, record::Record, Active, Bounds, DropClock, Hold,
+    Matrix, MatrixUpdate, Mino, MinoKind, RotationState, Settings, TEXTURE_CENTER_OFFSET,
 };
 
 /// Checks if the matrix can accomodate the given piece.
@@ -120,9 +112,9 @@ impl<'world> BoardQueryItem<'world> {
         } else if controller.shift_right {
             std::cmp::min(1, farthest_shift_right)
         } else if controller.repeat_left {
-            -std::cmp::min(SHIFT_SIZE, farthest_shift_left)
+            -std::cmp::min(self.settings.shift_size, farthest_shift_left)
         } else if controller.repeat_right {
-            std::cmp::min(SHIFT_SIZE, farthest_shift_right)
+            std::cmp::min(self.settings.shift_size, farthest_shift_right)
         } else {
             0
         };
@@ -204,13 +196,9 @@ pub(super) struct BoardQuery {
     queue: &'static mut PieceQueue,
     drop_clock: &'static mut DropClock,
     bounds: &'static Bounds,
+    settings: &'static Settings,
     id: Entity,
 }
-
-const SOFT_DROP_POWER: f32 = 10.0;
-const SHIFT_SIZE: i32 = 1;
-const GRAVITY_POWER: f32 = 0.02;
-const LOCK_DELAY: f32 = 0.5;
 
 #[derive(Event, Clone, Copy, Debug)]
 pub struct PieceSpawnEvent {
@@ -251,9 +239,8 @@ pub(super) fn update_board(
 
         if controller.hard_drop {
             let mut active = board.take_active();
-            let farthest_legal_drop = board.maximum_for_which(&shape_table, |y| {
-                active.tap_mut(|p| p.position.y -= y)
-            });
+            let farthest_legal_drop =
+                board.maximum_for_which(&shape_table, |y| active.tap_mut(|p| p.position.y -= y));
             active.position.y -= farthest_legal_drop;
             lock_piece(&mut board.matrix, active, &shape_table);
             spawner.send(PieceSpawnEvent {
@@ -278,7 +265,7 @@ pub(super) fn update_board(
         // such a thing makes sense.
         if farthest_legal_drop == 0 {
             board.drop_clock.lock += 1. / 60.;
-            if board.drop_clock.lock > LOCK_DELAY {
+            if board.drop_clock.lock > board.settings.lock_delay {
                 let active = board.take_active();
                 lock_piece(&mut board.matrix, active, &shape_table);
                 board.hold.activate();
@@ -294,9 +281,9 @@ pub(super) fn update_board(
             }
         } else {
             board.drop_clock.fall += if controller.soft_drop {
-                SOFT_DROP_POWER * GRAVITY_POWER
+                board.settings.soft_drop_power * board.settings.gravity_power
             } else {
-                GRAVITY_POWER
+                board.settings.gravity_power
             };
             let old_drop_clock = board.drop_clock.deref().fall;
             if old_drop_clock > 1.0 {
