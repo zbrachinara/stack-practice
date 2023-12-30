@@ -19,6 +19,7 @@ opt-level = 3
 [dependencies]
 bevy = { version = "0.12.1", features = ["dynamic_linking", "file_watcher"] }
 bevy_asset_loader = "0.18.0"
+bevy_egui = "0.24.0"
 duplicate = "1.0.0"
 futures = "0.3.29"
 if_chain = "1.0.2"
