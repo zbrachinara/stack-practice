@@ -17,6 +17,7 @@ use bevy::{
         system::{Commands, Query, Res, Resource, SystemId},
         world::World,
     },
+    hierarchy::DespawnRecursiveExt,
     math::{ivec2, IVec2},
     prelude::Deref,
     render::{
@@ -168,19 +169,12 @@ const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
 const TEXTURE_CENTER_OFFSET: IVec2 = ivec2(1, 2);
 pub const CELL_SIZE: u32 = 32;
 
-#[derive(Component)]
+#[derive(Component, SmartDefault)]
 struct Bounds {
+    #[default(MATRIX_DEFAULT_SIZE)]
     true_bounds: IVec2,
+    #[default(MATRIX_DEFAULT_LEGAL_BOUNDS)]
     legal_bounds: IVec2,
-}
-
-impl Default for Bounds {
-    fn default() -> Self {
-        Self {
-            true_bounds: MATRIX_DEFAULT_SIZE,
-            legal_bounds: MATRIX_DEFAULT_LEGAL_BOUNDS,
-        }
-    }
 }
 
 #[derive(Component, Default)]
@@ -265,15 +259,16 @@ pub struct Board {
     settings: Settings,
 }
 
-fn spawn_default_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-}
+fn begin_game(
+    mut commands: Commands,
+    old_boards: Query<Entity, With<Matrix>>,
+    start_game: Res<StartGame>,
+    time: Res<Time>,
+) {
+    for e in old_boards.iter() {
+        commands.entity(e).despawn_recursive();
+    }
 
-fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
-    camera.single_mut().scale = 2.0;
-}
-
-fn spawn_board(mut commands: Commands, start_game: Res<StartGame>, time: Res<Time>) {
     commands.spawn(Board::default());
     commands.insert_resource(FirstFrame(discretized_time(&time)));
     commands.run_system(**start_game);
@@ -324,10 +319,7 @@ impl Plugin for BoardPlugin {
             .add_plugins(BoardDisplayPlugin)
             .add_event::<PieceSpawnEvent>()
             .add_systems(Startup, register_start_game)
-            .add_systems(
-                OnEnter(MainState::Playing),
-                (spawn_board, spawn_default_camera),
-            )
+            .add_systems(OnEnter(MainState::Playing), begin_game)
             .add_systems(
                 Update,
                 (
@@ -340,7 +332,7 @@ impl Plugin for BoardPlugin {
             .add_systems(
                 PostUpdate,
                 (
-                    set_camera_scale,
+                    // set_camera_scale,
                     reset_controller,
                     record.run_if(resource_exists::<FirstFrame>()),
                 )

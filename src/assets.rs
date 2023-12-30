@@ -65,7 +65,7 @@ impl Plugin for StackingAssetsPlugin {
         app.init_asset::<ShapeTable>()
             .init_asset::<KickTable>()
             .add_loading_state(
-                LoadingState::new(MainState::Loading).continue_to_state(MainState::Playing),
+                LoadingState::new(MainState::Loading).continue_to_state(MainState::Ready),
             )
             .init_asset_loader::<ShapeTableLoader>()
             .init_asset_loader::<KickTableLoader>()

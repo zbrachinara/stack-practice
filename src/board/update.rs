@@ -9,6 +9,7 @@ use crate::assets::tables::{
     shape_table::{ShapeParameters, ShapeTable},
     QueryKickTable, QueryShapeTable,
 };
+use crate::state::MainState;
 
 use super::{
     controller::Controller, queue::PieceQueue, record::Record, Active, Bounds, DropClock, Hold,
@@ -209,6 +210,7 @@ pub struct PieceSpawnEvent {
 pub(super) fn spawn_piece(
     mut events: EventReader<PieceSpawnEvent>,
     mut boards: Query<BoardQuery>,
+    mut state: ResMut<NextState<MainState>>,
     shape_table: QueryShapeTable,
     record: Option<Res<Record>>,
 ) {
@@ -219,7 +221,7 @@ pub(super) fn spawn_piece(
             board.active.0 = Some(mino);
         } else {
             println!("{record:?}");
-            todo!("Change state to a transient losing state, or send a lose event")
+            state.0 = Some(MainState::PostGame);
         }
     }
 }
