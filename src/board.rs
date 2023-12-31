@@ -3,7 +3,6 @@
 use bevy::{
     app::{Last, Plugin, PostUpdate, Startup, Update},
     asset::{AssetPath, Handle},
-    core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         bundle::Bundle,
         component::Component,
@@ -21,7 +20,6 @@ use bevy::{
     math::{ivec2, IVec2},
     prelude::Deref,
     render::{
-        camera::OrthographicProjection,
         color::Color,
         texture::Image,
         view::{InheritedVisibility, Visibility},
@@ -232,16 +230,16 @@ struct MatrixUpdate {
     kind: MinoKind,
 }
 
-#[derive(Component, SmartDefault)]
-struct Settings {
+#[derive(Component, SmartDefault, Clone)]
+pub struct Settings {
     #[default = 10.0]
-    soft_drop_power: f32,
+    pub soft_drop_power: f32,
     #[default = 1]
-    shift_size: i32,
+    pub shift_size: i32,
     #[default = 0.02]
-    gravity_power: f32,
+    pub gravity_power: f32,
     #[default = 0.5]
-    lock_delay: f32,
+    pub lock_delay: f32,
 }
 
 #[derive(Bundle, Default)]
@@ -332,7 +330,6 @@ impl Plugin for BoardPlugin {
             .add_systems(
                 PostUpdate,
                 (
-                    // set_camera_scale,
                     reset_controller,
                     record.run_if(resource_exists::<FirstFrame>()),
                 )
