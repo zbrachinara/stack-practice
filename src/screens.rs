@@ -1,5 +1,9 @@
-use bevy::{ecs::system::SystemId, prelude::*};
+use std::num::{ParseFloatError, ParseIntError};
+
+use bevy::{ecs::system::SystemId, prelude::*, utils::thiserror};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use duplicate::duplicate;
+use smart_default::SmartDefault;
 
 use crate::{board::Settings, state::MainState};
 
@@ -29,35 +33,71 @@ fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
     camera.single_mut().scale = 2.0;
 }
 
-#[derive(Resource, Default)]
-pub struct GlobalSettings(pub Settings);
+#[derive(Resource, SmartDefault)]
+pub struct GlobalSettings {
+    #[default = "10"]
+    pub soft_drop_power: String,
+    #[default = "1"]
+    pub shift_size: String,
+    #[default = "0.02"]
+    pub gravity_power: String,
+    #[default = "0.5"]
+    pub lock_delay: String,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ParseNumError {
+    #[error("Invalid float in settings: {0}")]
+    Float(#[from] ParseFloatError),
+    #[error("Invalid int in settings: {0}")]
+    Int(#[from] ParseIntError),
+}
+
+impl TryFrom<&GlobalSettings> for Settings {
+    type Error = ParseNumError;
+
+    fn try_from(value: &GlobalSettings) -> Result<Self, Self::Error> {
+        Ok(Self {
+            soft_drop_power: value.soft_drop_power.parse()?,
+            shift_size: value.shift_size.parse()?,
+            gravity_power: value.gravity_power.parse()?,
+            lock_delay: value.lock_delay.parse()?,
+        })
+    }
+}
 
 fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSettings>) {
     egui::SidePanel::left("settings_panel").show(contexts.ctx_mut(), |ui| {
         egui::Grid::new("settings_pannel_inner").show(ui, |ui| {
-            let mut soft_drop_power_str = settings.0.soft_drop_power.to_string();
-            ui.label("Setting: Soft Drop Power");
-            ui.text_edit_singleline(&mut soft_drop_power_str);
-
-            println!("{soft_drop_power_str}");
-            if let Ok(f) = soft_drop_power_str.parse::<f32>() {
-                if settings.0.soft_drop_power != f {
-                    settings.0.soft_drop_power = f;
+            duplicate! {
+                [
+                    field               display_name;
+                    [soft_drop_power]   ["Soft Drop Power"];
+                    [shift_size]        ["Shift Size"];
+                    [gravity_power]     ["Gravity power"];
+                    [lock_delay]        ["Lock Delay"];
+                ]
+                let mut copy = settings.field.clone();
+                ui.label(display_name);
+                ui.text_edit_singleline(&mut copy);
+                if settings.field != copy {
+                    settings.field = copy;
                 }
+                ui.end_row();
             }
-            ui.end_row();
         })
     });
 }
 
 fn apply_settings(global_settings: Res<GlobalSettings>, mut all_settings: Query<&mut Settings>) {
-    if global_settings.is_changed() {
-        println!(
-            "applying settings: sdf: {}",
-            global_settings.0.soft_drop_power
-        );
-        for mut s in all_settings.iter_mut() {
-            *s = global_settings.0.clone()
+    if_chain::if_chain! {
+        if global_settings.is_changed();
+        if let Ok(global) = Settings::try_from(&*global_settings);
+        then {
+            println!("change made");
+            for mut s in all_settings.iter_mut() {
+                *s = global.clone()
+            }
         }
-    }
+    };
 }

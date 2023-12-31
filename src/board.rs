@@ -28,6 +28,7 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
 };
 use smart_default::SmartDefault;
+use tap::Tap;
 
 mod controller;
 mod display;
@@ -37,6 +38,7 @@ mod update;
 
 use crate::{
     assets::{tables::shape_table::ShapeParameters, MinoTextures},
+    screens::GlobalSettings,
     state::MainState,
 };
 
@@ -262,12 +264,14 @@ fn begin_game(
     old_boards: Query<Entity, With<Matrix>>,
     start_game: Res<StartGame>,
     time: Res<Time>,
+    settings: Res<GlobalSettings>,
 ) {
     for e in old_boards.iter() {
         commands.entity(e).despawn_recursive();
     }
 
-    commands.spawn(Board::default());
+    commands
+        .spawn(Board::default().tap_mut(|b| b.settings = Settings::try_from(&*settings).unwrap()));
     commands.insert_resource(FirstFrame(discretized_time(&time)));
     commands.run_system(**start_game);
 }
