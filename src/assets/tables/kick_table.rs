@@ -45,8 +45,10 @@ impl AssetLoader for KickTableLoader {
                 .read_to_end(&mut bytes)
                 .await
                 .map_err(|_| "Could not read from the given file (when loading kick table)")?;
-            ron::de::from_bytes::<KickTable>(&bytes)
-                .map_err(|e| {println!("{}", e); "Could not interpret the given kick table"})
+            ron::de::from_bytes::<KickTable>(&bytes).map_err(|e| {
+                println!("{}", e);
+                "Could not interpret the given kick table"
+            })
         })
     }
 

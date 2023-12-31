@@ -15,7 +15,7 @@ use crate::state::MainState;
 
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
-    shape_table::{ShapeTable, ShapeTableLoader, DefaultShapeTable},
+    shape_table::{DefaultShapeTable, ShapeTable, ShapeTableLoader},
     sprite_table::SpriteTable,
 };
 

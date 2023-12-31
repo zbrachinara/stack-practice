@@ -1,5 +1,5 @@
 use bevy::{
-    math::{UVec2, IVec2},
+    math::{IVec2, UVec2},
     render::{
         render_resource::{Extent3d, TextureDimension, TextureFormat},
         texture::Image,
