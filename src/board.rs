@@ -232,7 +232,7 @@ struct MatrixUpdate {
     kind: MinoKind,
 }
 
-#[derive(Component, SmartDefault, Clone)]
+#[derive(Component, SmartDefault, Clone, Debug)]
 pub struct Settings {
     #[default = 10.0]
     pub soft_drop_power: f32,

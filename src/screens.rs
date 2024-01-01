@@ -89,12 +89,13 @@ fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSetting
     });
 }
 
-fn apply_settings(global_settings: Res<GlobalSettings>, mut all_settings: Query<&mut Settings>) {
+pub fn apply_settings(global_settings: Res<GlobalSettings>, mut all_settings: Query<&mut Settings>) {
     if_chain::if_chain! {
         if global_settings.is_changed();
         if let Ok(global) = Settings::try_from(&*global_settings);
         then {
             println!("change made");
+            println!("{global:?}");
             for mut s in all_settings.iter_mut() {
                 *s = global.clone()
             }
