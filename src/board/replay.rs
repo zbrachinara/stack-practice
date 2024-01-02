@@ -1,3 +1,5 @@
+//! Replay code currently depends on the board being unique in the world.
+
 use bevy::prelude::*;
 
 use crate::state::MainState;
@@ -8,7 +10,7 @@ use super::{
 };
 
 /// Stores information about the state of the replay (i.e. paused or played, frames progressed).
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct ReplayInfo {
     /// The current frame the replay occupies.
     frame: u64,
@@ -24,6 +26,15 @@ pub struct InitialReplayFrame {
     record_frame: u64,
     /// The engine time from which the replay was unpaused or started.
     real_frame: u64,
+}
+
+pub fn initialize_replay(mut commands: Commands, mut board: Query<BoardQuery>) {
+    board.single_mut().clear_board();
+    commands.insert_resource(ReplayInfo::default());
+}
+
+pub fn cleanup_replay(mut commands: Commands) {
+    commands.remove_resource::<ReplayInfo>()
 }
 
 pub fn replay(record: Res<Record>, replay_info: Res<ReplayInfo>, mut board: Query<BoardQuery>) {
@@ -57,6 +68,8 @@ impl Plugin for ReplayPlugin {
         .add_systems(
             PostUpdate,
             advance_frame.run_if(in_state(MainState::PostGame)),
-        );
+        )
+        .add_systems(OnEnter(MainState::PostGame), initialize_replay)
+        .add_systems(OnExit(MainState::PostGame), cleanup_replay);
     }
 }

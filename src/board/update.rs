@@ -190,6 +190,11 @@ impl<'world> BoardQueryItem<'world> {
             None
         }
     }
+    
+    /// Reset the board to its original state (matrix, hold, queue)
+    pub fn clear_board(&mut self) {
+        unimplemented!()
+    }
 
     pub fn apply_record(&mut self, record: &RecordItem) {
         unimplemented!()
