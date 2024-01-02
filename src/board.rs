@@ -48,6 +48,7 @@ use self::{
     display::BoardDisplayPlugin,
     queue::PieceQueue,
     record::{discretized_time, record, FirstFrame, Record},
+    replay::ReplayPlugin,
     update::{spawn_piece, update_board, PieceSpawnEvent},
 };
 
@@ -319,7 +320,7 @@ impl Plugin for BoardPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_resource::<Controller>()
             .init_resource::<Record>()
-            .add_plugins(BoardDisplayPlugin)
+            .add_plugins((BoardDisplayPlugin, ReplayPlugin))
             .add_event::<PieceSpawnEvent>()
             .add_systems(Startup, register_start_game)
             .add_systems(OnEnter(MainState::Playing), begin_game)

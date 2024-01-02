@@ -11,6 +11,7 @@ use crate::assets::tables::{
 };
 use crate::state::MainState;
 
+use super::record::RecordItem;
 use super::{
     controller::Controller, queue::PieceQueue, record::Record, Active, Bounds, DropClock, Hold,
     Matrix, MatrixUpdate, Mino, MinoKind, RotationState, Settings, TEXTURE_CENTER_OFFSET,
@@ -188,6 +189,10 @@ impl<'world> BoardQueryItem<'world> {
         } else {
             None
         }
+    }
+
+    pub fn apply_record(&mut self, record: &RecordItem) {
+        unimplemented!()
     }
 }
 
