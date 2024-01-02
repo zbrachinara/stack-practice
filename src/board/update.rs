@@ -85,28 +85,31 @@ impl<'world> BoardQueryItem<'world> {
         self.active.0.take().unwrap()
     }
 
-    // TODO documentation, make this function more transparent
-    fn maximum_for_which<F>(&self, table: &ShapeTable, mut f: F) -> i32
+    /// Starting from zero, finds the highest number for which the associated mino (given by `f`) is
+    /// within the bounds of the matrix. If there is no such number, `None` is returned. Otherwise,
+    /// the value will always be a nonnegative number.
+    fn maximum_for_which<F>(&self, table: &ShapeTable, mut f: F) -> Option<i32>
     where
         F: FnMut(i32) -> Mino,
     {
-        (1..)
-            .map(|o| (o, f(o)))
-            .find(|(_, mino)| !has_free_space(&self.matrix, *mino, table))
-            .map(|(o, _)| o - 1)
-            .unwrap()
+        (0..)
+            .find(|o| !has_free_space(&self.matrix, f(*o), table))
+            .and_then(|o| (o > 0).then_some(o - 1))
     }
 
     /// If the controller requests that the active piece is shifted, the piece will be shifted and
     /// marked as modified. Returns true if the shift was successful.
     fn do_shift(&mut self, controller: &Controller, shape_table: &ShapeTable) -> bool {
-        let farthest_shift_left = self.maximum_for_which(shape_table, |x| {
-            self.active().tap_mut(|p| p.position.x -= x)
-        });
-
-        let farthest_shift_right = self.maximum_for_which(shape_table, |x| {
-            self.active().tap_mut(|p| p.position.x += x)
-        });
+        let farthest_shift_left = self
+            .maximum_for_which(shape_table, |x| {
+                self.active().tap_mut(|p| p.position.x -= x)
+            })
+            .unwrap();
+        let farthest_shift_right = self
+            .maximum_for_which(shape_table, |x| {
+                self.active().tap_mut(|p| p.position.x += x)
+            })
+            .unwrap();
 
         let shift_size = if controller.shift_left {
             -std::cmp::min(1, farthest_shift_left)
@@ -241,8 +244,9 @@ pub(super) fn update_board(
 
         if controller.hard_drop {
             let mut active = board.take_active();
-            let farthest_legal_drop =
-                board.maximum_for_which(&shape_table, |y| active.tap_mut(|p| p.position.y -= y));
+            let farthest_legal_drop = board
+                .maximum_for_which(&shape_table, |y| active.tap_mut(|p| p.position.y -= y))
+                .unwrap();
             active.position.y -= farthest_legal_drop;
             lock_piece(&mut board.matrix, active, &shape_table);
             spawner.send(PieceSpawnEvent {
@@ -257,9 +261,11 @@ pub(super) fn update_board(
             continue;
         }
 
-        let farthest_legal_drop = board.maximum_for_which(&shape_table, |y| {
-            board.active().tap_mut(|p| p.position.y -= y)
-        });
+        let farthest_legal_drop = board
+            .maximum_for_which(&shape_table, |y| {
+                board.active().tap_mut(|p| p.position.y -= y)
+            })
+            .unwrap();
 
         // The drop clock should only either drop the piece or lock it, NOT BOTH. This is so
         // that the player has time to interact with the piece when it hits the bottom, for a
