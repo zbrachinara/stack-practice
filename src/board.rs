@@ -34,6 +34,7 @@ mod controller;
 mod display;
 mod queue;
 mod record;
+mod replay;
 mod update;
 
 use crate::{
