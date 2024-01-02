@@ -6,8 +6,6 @@ use crate::{
     image_tools::{copy_from_to, transparent_texture},
 };
 
-use super::AddedOrChanged;
-
 #[derive(Component)]
 pub struct MatrixSprite;
 
@@ -39,7 +37,7 @@ pub(super) fn spawn_matrix_sprite(
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
 pub(super) fn redraw_board(
-    board: Query<(&Matrix, &Children), AddedOrChanged<Matrix>>,
+    board: Query<(&Matrix, &Children), Changed<Matrix>>,
     children: Query<&Handle<Image>, With<MatrixSprite>>,
     mut texture_server: ResMut<Assets<Image>>,
     mino_textures: Res<MinoTextures>,
@@ -61,7 +59,7 @@ pub(super) fn redraw_board(
 
 /// Centers the legal part of the matrix rather than the entire matrix.
 pub(super) fn center_board(
-    boards: Query<(&Bounds, &Children), AddedOrChanged<Bounds>>,
+    boards: Query<(&Bounds, &Children), Changed<Bounds>>,
     mut sprites: Query<&mut Transform, With<MatrixSprite>>,
 ) {
     for (board, children) in boards.iter() {

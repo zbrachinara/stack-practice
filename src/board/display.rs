@@ -15,8 +15,6 @@ use self::{
     queue::display_queue,
 };
 
-type AddedOrChanged<T> = Or<(Added<T>, Changed<T>)>;
-
 mod active;
 mod floor;
 mod hold;

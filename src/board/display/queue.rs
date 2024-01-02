@@ -6,8 +6,6 @@ use crate::{
     board::{queue::PieceQueue, RotationState, CELL_SIZE, MATRIX_DEFAULT_LEGAL_BOUNDS},
 };
 
-use super::AddedOrChanged;
-
 #[derive(Component)]
 pub struct QueueSprite(usize);
 
@@ -46,7 +44,7 @@ pub(super) fn spawn_queue_sprite(mut commands: Commands, boards: Query<Entity, A
 /// Updates the visual state of the piece queue. When the queue changes, each piece in the queue has
 /// its texture updated to match its intended state.
 pub(super) fn display_queue(
-    queue: Query<(&PieceQueue, &Children), AddedOrChanged<PieceQueue>>,
+    queue: Query<(&PieceQueue, &Children), Changed<PieceQueue>>,
     mut sprites: Query<(&mut Handle<Image>, &QueueSprite)>,
     sprite_table: Res<SpriteTable>,
 ) {

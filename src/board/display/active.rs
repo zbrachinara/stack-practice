@@ -5,8 +5,6 @@ use crate::{
     board::{Active, Bounds, CELL_SIZE},
 };
 
-use super::AddedOrChanged;
-
 #[derive(Component)]
 pub struct ActiveSprite;
 
@@ -33,7 +31,7 @@ pub(super) fn spawn_active_sprite(mut commands: Commands, boards: Query<Entity, 
 /// the sprite representing it is hidden. If it is modified in any other way, the sprite's position
 /// and kind will be updated to match.
 pub(super) fn display_active(
-    active: Query<(&Active, &Bounds, &Children), AddedOrChanged<Active>>,
+    active: Query<(&Active, &Bounds, &Children), Changed<Active>>,
     mut sprites: Query<(&mut Visibility, &mut Transform, &mut Handle<Image>), With<ActiveSprite>>,
     sprite_table: Res<SpriteTable>,
 ) {

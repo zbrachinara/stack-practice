@@ -35,7 +35,7 @@ pub fn replay(record: Res<Record>, replay_info: Res<ReplayInfo>, mut board: Quer
         .for_each(|item| board.apply_record(item));
 }
 
-fn advance_frame(record: Res<Record>, mut replay_info: ResMut<ReplayInfo>, time: Res<Time>) {
+fn advance_frame(mut replay_info: ResMut<ReplayInfo>, time: Res<Time>) {
     if let Some(initial) = &replay_info.playing {
         let current_time = discretized_time(&time);
         let elapsed_time = current_time - initial.real_frame;

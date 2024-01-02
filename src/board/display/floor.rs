@@ -10,8 +10,6 @@ use crate::assets::tables::{shape_table::ShapeParameters, QueryShapeTable};
 
 use crate::board::{Active, Matrix, CELL_SIZE, MATRIX_DEFAULT_LEGAL_BOUNDS};
 
-use super::AddedOrChanged;
-
 #[derive(Clone, TypePath, Asset, AsBindGroup)]
 pub struct DropShadowMaterial {
     #[texture(1, dimension = "1d")]
@@ -73,7 +71,7 @@ pub(super) fn spawn_drop_shadow(
 }
 
 pub(super) fn update_drop_shadow(
-    active: Query<(&Active, &Children), AddedOrChanged<Active>>,
+    active: Query<(&Active, &Children), Changed<Active>>,
     mat: Query<&Handle<DropShadowMaterial>>,
     mut images: ResMut<Assets<Image>>,
     mut mats: ResMut<Assets<DropShadowMaterial>>,
