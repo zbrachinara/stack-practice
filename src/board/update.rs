@@ -194,14 +194,30 @@ impl<'world> BoardQueryItem<'world> {
 
     /// Reset the board to its original state (matrix, hold, queue)
     pub fn clear_board(&mut self) {
-        unimplemented!()
+        *(self.hold) = Hold::Empty;
+        self.active.0 = None;
+
+        let mut updates = Vec::new();
+        for (y, row) in self.matrix.data.iter_mut().enumerate() {
+            for (x, cell) in row.iter_mut().enumerate() {
+                let p = ivec2(x as i32, y as i32);
+                if *cell != MinoKind::E {
+                    *cell = MinoKind::E;
+                    updates.push(MatrixUpdate {
+                        loc: p,
+                        kind: MinoKind::E,
+                    });
+                }
+            }
+        }
+        self.matrix.updates.extend(updates);
+
+        (*self.queue) = default(); // TODO empty the queue instead of filling it with arbitrary data
     }
 
     pub fn apply_record(&mut self, record: &RecordItem) {
         match &record.data {
-            Update::ActiveChange { new_position } => {
-                self.active.0 = *new_position;
-            }
+            Update::ActiveChange { new_position } => self.active.0 = *new_position,
             Update::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
             Update::Hold { replace_with } => *(self.hold) = *replace_with,
             Update::MatrixChange { update } => {
