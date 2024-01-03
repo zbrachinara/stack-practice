@@ -202,10 +202,8 @@ impl<'world> BoardQueryItem<'world> {
             Update::ActiveChange { new_position } => {
                 self.active.0 = *new_position;
             }
-            Update::QueueChange { new_queue } => todo!(),
-            Update::Hold { replace_with } => {
-                *(self.hold) = *replace_with;
-            }
+            Update::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
+            Update::Hold { replace_with } => *(self.hold) = *replace_with,
             Update::MatrixChange { update } => {
                 self.matrix.updates.push(*update);
                 self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.kind;

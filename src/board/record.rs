@@ -7,7 +7,7 @@ use bevy::{
     time::Time,
 };
 
-use super::{queue::PieceQueue, Active, Hold, Matrix, MatrixUpdate, Mino, MinoKind};
+use super::{queue::PieceQueue, Active, Hold, Matrix, MatrixUpdate, Mino};
 
 #[derive(Resource, Default, Debug)]
 pub struct Record {
@@ -23,7 +23,7 @@ pub struct RecordItem {
 #[derive(Debug)]
 pub enum Update {
     ActiveChange { new_position: Option<Mino> },
-    QueueChange { new_queue: Box<[MinoKind]> },
+    QueueChange { new_queue: PieceQueue },
     Hold { replace_with: Hold },
     MatrixChange { update: MatrixUpdate },
 }
@@ -55,9 +55,10 @@ pub(super) fn record(
         }
 
         if queue.is_changed() || queue.is_added() {
-            let q = Vec::from(queue.window().clone()).into_boxed_slice();
             record.data.push(RecordItem {
-                data: Update::QueueChange { new_queue: q },
+                data: Update::QueueChange {
+                    new_queue: queue.clone(),
+                },
                 time: dt,
             })
         }

@@ -1,16 +1,18 @@
 use std::{collections::VecDeque, iter::repeat_with};
 
 use bevy::{ecs::component::Component, utils::default};
-use rand::{rngs::StdRng, seq::SliceRandom, thread_rng, SeedableRng};
+use rand::{seq::SliceRandom, thread_rng, SeedableRng};
+use rand_pcg::Pcg32;
+use serde::{Serialize, Deserialize};
 use tap::Tap;
 
 use super::MinoKind;
 
-#[derive(Component)]
+#[derive(Component, Clone, Serialize, Deserialize, Debug)]
 pub struct PieceQueue {
     window: VecDeque<MinoKind>,
     window_size: usize,
-    rng: StdRng,
+    rng: Pcg32,
 }
 
 impl Default for PieceQueue {
@@ -18,7 +20,7 @@ impl Default for PieceQueue {
         Self {
             window: default(),
             window_size: 5,
-            rng: StdRng::from_rng(thread_rng()).expect("could not construct an rng"),
+            rng: Pcg32::from_rng(thread_rng()).expect("could not construct an rng"),
         }
         .tap_mut(|a| a.refill_window())
     }

@@ -52,7 +52,7 @@ use self::{
     update::{spawn_piece, update_board, PieceSpawnEvent},
 };
 
-#[derive(Debug, PartialEq, Eq, Hash, serde::Deserialize, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, Clone, Copy)]
 #[rustfmt::skip]
 pub enum MinoKind {
     T, O, L, J, S, Z, I, G, E
