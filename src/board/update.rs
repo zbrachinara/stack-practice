@@ -9,6 +9,7 @@ use crate::assets::tables::{
     shape_table::{ShapeParameters, ShapeTable},
     QueryKickTable, QueryShapeTable,
 };
+use crate::board::record::Update;
 use crate::state::MainState;
 
 use super::record::RecordItem;
@@ -190,14 +191,26 @@ impl<'world> BoardQueryItem<'world> {
             None
         }
     }
-    
+
     /// Reset the board to its original state (matrix, hold, queue)
     pub fn clear_board(&mut self) {
         unimplemented!()
     }
 
     pub fn apply_record(&mut self, record: &RecordItem) {
-        unimplemented!()
+        match &record.data {
+            Update::ActiveChange { new_position } => {
+                self.active.0 = *new_position;
+            }
+            Update::QueueChange { new_queue } => todo!(),
+            Update::Hold { replace_with } => {
+                *(self.hold) = *replace_with;
+            }
+            Update::MatrixChange { update } => {
+                self.matrix.updates.push(*update);
+                self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.kind;
+            }
+        }
     }
 }
 
