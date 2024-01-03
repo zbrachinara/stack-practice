@@ -21,6 +21,7 @@ pub struct ReplayInfo {
 
 /// If the game is unpaused, this struct holds information about where the replay began, both in
 /// engine time and in time with respect to the beginning of the current record.
+#[derive(Debug)]
 pub struct InitialReplayFrame {
     /// The frame within the record from which replaying began.
     record_frame: u64,
@@ -40,9 +41,10 @@ pub fn cleanup_replay(mut commands: Commands) {
 pub fn replay(record: Res<Record>, replay_info: Res<ReplayInfo>, mut board: Query<BoardQuery>) {
     let mut board = board.single_mut();
 
+    // TODO also account for frame skips
     record.data[replay_info.ix..]
         .iter()
-        .take_while(|item| item.time == replay_info.frame)
+        .filter(|item| item.time == replay_info.frame)
         .for_each(|item| board.apply_record(item));
 }
 
@@ -52,7 +54,24 @@ fn advance_frame(mut replay_info: ResMut<ReplayInfo>, time: Res<Time>) {
         let elapsed_time = current_time - initial.real_frame;
         let new_record_frame = initial.record_frame + elapsed_time;
         if new_record_frame != replay_info.frame {
+            // TODO also advance ix
             replay_info.frame = new_record_frame;
+        }
+    }
+}
+
+fn toggle_pause(mut replay_info: ResMut<ReplayInfo>, input: Res<Input<KeyCode>>, time: Res<Time>) {
+    if input.just_pressed(KeyCode::Space) {
+        if replay_info.playing.is_some() {
+            replay_info.playing = None;
+        } else {
+            let real_time = discretized_time(&time);
+            let frame_time = replay_info.frame;
+
+            replay_info.playing = Some(InitialReplayFrame {
+                record_frame: frame_time,
+                real_frame: real_time,
+            });
         }
     }
 }
@@ -65,6 +84,7 @@ impl Plugin for ReplayPlugin {
             Update,
             replay.run_if(in_state(MainState::PostGame).and_then(resource_changed::<ReplayInfo>())),
         )
+        .add_systems(Update, toggle_pause.run_if(in_state(MainState::PostGame)))
         .add_systems(
             PostUpdate,
             advance_frame.run_if(in_state(MainState::PostGame)),

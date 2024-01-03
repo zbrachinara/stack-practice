@@ -14,8 +14,8 @@ use crate::state::MainState;
 
 use super::record::RecordItem;
 use super::{
-    controller::Controller, queue::PieceQueue, record::Record, Active, Bounds, DropClock, Hold,
-    Matrix, MatrixUpdate, Mino, MinoKind, RotationState, Settings, TEXTURE_CENTER_OFFSET,
+    controller::Controller, queue::PieceQueue, Active, Bounds, DropClock, Hold, Matrix,
+    MatrixUpdate, Mino, MinoKind, RotationState, Settings, TEXTURE_CENTER_OFFSET,
 };
 
 /// Checks if the matrix can accomodate the given piece.
@@ -252,7 +252,6 @@ pub(super) fn spawn_piece(
     mut boards: Query<BoardQuery>,
     mut state: ResMut<NextState<MainState>>,
     shape_table: QueryShapeTable,
-    record: Option<Res<Record>>,
 ) {
     for &PieceSpawnEvent { board, mino } in events.read() {
         let mut board = boards.get_mut(board).unwrap();
