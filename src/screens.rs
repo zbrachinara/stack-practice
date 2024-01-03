@@ -94,8 +94,6 @@ pub fn apply_settings(global_settings: Res<GlobalSettings>, mut all_settings: Qu
         if global_settings.is_changed();
         if let Ok(global) = Settings::try_from(&*global_settings);
         then {
-            println!("change made");
-            println!("{global:?}");
             for mut s in all_settings.iter_mut() {
                 *s = global.clone()
             }

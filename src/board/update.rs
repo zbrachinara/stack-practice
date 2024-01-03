@@ -260,7 +260,6 @@ pub(super) fn spawn_piece(
             *board.drop_clock = default();
             board.active.0 = Some(mino);
         } else {
-            println!("{record:?}");
             state.0 = Some(MainState::PostGame);
         }
     }
