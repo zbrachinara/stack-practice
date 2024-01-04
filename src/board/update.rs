@@ -15,12 +15,12 @@ use crate::state::MainState;
 use super::record::RecordItem;
 use super::{
     controller::Controller, queue::PieceQueue, Active, Bounds, DropClock, Hold, Matrix,
-    MatrixUpdate, Mino, MinoKind, RotationState, Settings, TEXTURE_CENTER_OFFSET,
+    MatrixUpdate, Mino, MinoKind, RotationState, Settings,
 };
 
 /// Checks if the matrix can accomodate the given piece.
 fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool {
-    shape_table.0[&ShapeParameters::from(&mino)]
+    shape_table.table[&ShapeParameters::from(&mino)]
         .iter()
         .map(|&shape_offset| shape_offset + mino.position)
         .all(|position| matrix.get(position) == Some(MinoKind::E))
@@ -33,7 +33,7 @@ fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool
 fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
     let old_board = matrix.data.clone();
 
-    for &p in &shape_table.0[&ShapeParameters::from(&mino)] {
+    for &p in &shape_table.table[&ShapeParameters::from(&mino)] {
         *(matrix.get_mut(p + mino.position).unwrap()) = mino.kind;
     }
 
@@ -288,7 +288,7 @@ pub(super) fn update_board(
                 board: board.id,
                 mino: Mino {
                     kind: board.queue.take(),
-                    position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                    position: ivec2(4, 22),
                     rotation: RotationState::Up,
                 },
             });
@@ -316,7 +316,7 @@ pub(super) fn update_board(
                     board: board.id,
                     mino: Mino {
                         kind: board.queue.take(),
-                        position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                        position: ivec2(4, 22),
                         rotation: RotationState::Up,
                     },
                 });
@@ -351,7 +351,7 @@ pub(super) fn update_board(
                     board: board.id,
                     mino: Mino {
                         kind: replace,
-                        position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                        position: ivec2(4, 22),
                         rotation: RotationState::Up,
                     },
                 })

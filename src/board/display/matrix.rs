@@ -13,12 +13,12 @@ use crate::{
 #[derive(Clone, TypePath, Asset, AsBindGroup)]
 pub struct MatrixMaterial {
     #[uniform(0)]
-    dimensions: UVec2,
+    pub dimensions: UVec2,
     #[texture(1, dimension = "2d_array")]
     #[sampler(2)]
-    mino_textures: Handle<Image>,
+    pub mino_textures: Handle<Image>,
     #[storage(3)]
-    data: Vec<u32>,
+    pub data: Vec<u32>,
 }
 
 impl Material2d for MatrixMaterial {
@@ -40,10 +40,9 @@ pub(super) fn spawn_matrix_sprite(
 ) {
     for e in boards.iter() {
         let all_textures = stack_images(&mino_textures.view(), &texture_server);
-        let handle = texture_server.add(all_textures);
         let material = MatrixMaterial {
             dimensions: MATRIX_DEFAULT_SIZE.as_uvec2(),
-            mino_textures: handle.clone(),
+            mino_textures: texture_server.add(all_textures),
             data: vec![0; 40 * 10],
         };
 

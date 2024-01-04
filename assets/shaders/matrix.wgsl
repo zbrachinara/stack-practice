@@ -19,4 +19,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4f {
     let cell_inner_position = cell_position - floor(cell_position);
 
     return textureSample(mino_textures, mino_textures_sampler, cell_inner_position, cell_type);
+    // return vec4f(cell_inner_position, 0f, 1f);
+    // return in.world_position;
 }

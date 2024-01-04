@@ -1,22 +1,67 @@
-use bevy::{prelude::*, sprite::Anchor};
+use bevy::{
+    math::{ivec2, vec2},
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    sprite::MaterialMesh2dBundle,
+};
 
 use crate::{
-    assets::tables::{shape_table::ShapeParameters, sprite_table::SpriteTable},
-    board::{Active, Bounds, CELL_SIZE},
+    assets::{
+        tables::{shape_table::ShapeParameters, QueryShapeTable},
+        MinoTextures,
+    },
+    board::{Active, Bounds, MinoKind, CELL_SIZE},
+    image_tools::stack_images,
 };
+
+use super::matrix::MatrixMaterial;
 
 #[derive(Component)]
 pub struct ActiveSprite;
 
-pub(super) fn spawn_active_sprite(mut commands: Commands, boards: Query<Entity, Added<Active>>) {
+pub(super) fn spawn_active_sprite(
+    mut commands: Commands,
+    boards: Query<Entity, Added<Active>>,
+    mino_textures: Res<MinoTextures>,
+    shape_table: QueryShapeTable,
+    mut images: ResMut<Assets<Image>>,
+    mut mesh_server: ResMut<Assets<Mesh>>,
+    mut material_server: ResMut<Assets<MatrixMaterial>>,
+) {
     for e in boards.iter() {
+        let dimensions = (shape_table.bounds[1] - shape_table.bounds[0] + ivec2(1, 1)).as_uvec2();
+
+        let all_textures = stack_images(&mino_textures.view(), &images);
+        let material = MatrixMaterial {
+            dimensions,
+            mino_textures: images.add(all_textures),
+            data: vec![0; (dimensions.x * dimensions.y) as usize],
+        };
+
+        let lo_f32 = shape_table.bounds[0].as_vec2();
+        let hi_f32 = (shape_table.bounds[1] + IVec2::ONE).as_vec2();
+        let mesh = Mesh::new(PrimitiveTopology::TriangleList)
+            .with_inserted_attribute(
+                Mesh::ATTRIBUTE_POSITION,
+                dbg!([
+                    lo_f32,
+                    vec2(lo_f32.x, hi_f32.y),
+                    hi_f32,
+                    vec2(hi_f32.x, lo_f32.y),
+                ]
+                .map(|i| i.extend(0.) * (CELL_SIZE as f32))
+                .to_vec()),
+            )
+            .with_inserted_attribute(
+                Mesh::ATTRIBUTE_UV_0,
+                vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            )
+            .with_indices(Some(Indices::U32(vec![0, 3, 1, 1, 3, 2])));
+
         let active_sprite = commands
-            .spawn(SpriteBundle {
-                sprite: Sprite {
-                    flip_y: true,
-                    anchor: Anchor::BottomLeft,
-                    ..default()
-                },
+            .spawn(MaterialMesh2dBundle {
+                material: material_server.add(material),
+                mesh: mesh_server.add(mesh).into(),
                 ..default()
             })
             .insert(ActiveSprite)
@@ -32,12 +77,17 @@ pub(super) fn spawn_active_sprite(mut commands: Commands, boards: Query<Entity, 
 /// and kind will be updated to match.
 pub(super) fn display_active(
     active: Query<(&Active, &Bounds, &Children), Changed<Active>>,
-    mut sprites: Query<(&mut Visibility, &mut Transform, &mut Handle<Image>), With<ActiveSprite>>,
-    sprite_table: Res<SpriteTable>,
+    mut sprites: Query<
+        (&mut Visibility, &mut Transform, &Handle<MatrixMaterial>),
+        With<ActiveSprite>,
+    >,
+    shape_table: QueryShapeTable,
+    mut material_server: ResMut<Assets<MatrixMaterial>>,
 ) {
     for (Active(e), bounds, children) in active.iter() {
         let active_sprite_id = children.iter().copied().find(|&c| sprites.contains(c));
-        let (mut vis, mut pos, mut tex) = sprites.get_mut(active_sprite_id.unwrap()).unwrap();
+        let (mut vis, mut pos, tex) = sprites.get_mut(active_sprite_id.unwrap()).unwrap();
+        let mat = material_server.get_mut(tex).unwrap();
 
         if let Some(piece) = e {
             *vis = Visibility::Inherited;
@@ -46,7 +96,13 @@ pub(super) fn display_active(
             let new_pos = (piece.position.as_vec2() + offset) * CELL_SIZE as f32;
             pos.translation = new_pos.extend(1.0);
 
-            *tex = sprite_table.0[&ShapeParameters::from(piece)].clone();
+            mat.data.fill(MinoKind::E as u32);
+            let shape = &shape_table.table[&ShapeParameters::from(piece)];
+            for &p in shape {
+                let loc = p - shape_table.bounds[0];
+                let ix = loc.y * ((shape_table.bounds[1] - shape_table.bounds[0]).x + 1) + loc.x;
+                mat.data[ix as usize] = piece.kind as u32;
+            }
         } else {
             *vis = Visibility::Hidden
         }
