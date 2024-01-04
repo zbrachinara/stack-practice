@@ -12,10 +12,7 @@ use strum::IntoEnumIterator;
 
 pub mod tables;
 
-use crate::{
-    board::{MinoKind, MinoKindIter},
-    state::MainState,
-};
+use crate::{board::MinoKind, state::MainState};
 
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
