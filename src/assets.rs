@@ -8,10 +8,14 @@ use bevy_asset_loader::{
     asset_collection::AssetCollection,
     loading_state::{LoadingState, LoadingStateAppExt},
 };
+use strum::IntoEnumIterator;
 
 pub mod tables;
 
-use crate::state::MainState;
+use crate::{
+    board::{MinoKind, MinoKindIter},
+    state::MainState,
+};
 
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
@@ -21,7 +25,7 @@ use self::tables::{
 
 pub struct StackingAssetsPlugin;
 
-#[derive(Resource, AssetCollection)]
+#[derive(Resource, AssetCollection, Clone)]
 pub struct MinoTextures {
     #[asset(path = "minos/T.png")]
     pub t: Handle<Image>,
@@ -44,8 +48,9 @@ pub struct MinoTextures {
 }
 
 impl MinoTextures {
-    pub fn iter(&self) -> impl Iterator<Item = Handle<Image>> {
+    pub fn view(&self) -> [Handle<Image>; 9] {
         [
+            self.e.clone(),
             self.t.clone(),
             self.o.clone(),
             self.l.clone(),
@@ -54,9 +59,10 @@ impl MinoTextures {
             self.z.clone(),
             self.i.clone(),
             self.g.clone(),
-            self.e.clone(),
         ]
-        .into_iter()
+    }
+    pub fn iter_with_kind(&self) -> impl Iterator<Item = (MinoKind, Handle<Image>)> + '_ {
+        MinoKind::iter().map(|i| (i, i.select(self)))
     }
 }
 

@@ -1,10 +1,31 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::render_resource::{AsBindGroup, ShaderRef},
+    sprite::{Material2d, MaterialMesh2dBundle},
+};
 
 use crate::{
     assets::MinoTextures,
     board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE},
-    image_tools::{copy_from_to, transparent_texture},
+    image_tools::stack_images,
 };
+
+#[derive(Clone, TypePath, Asset, AsBindGroup)]
+pub struct MatrixMaterial {
+    #[uniform(0)]
+    dimensions: UVec2,
+    #[texture(1, dimension = "2d_array")]
+    #[sampler(2)]
+    mino_textures: Handle<Image>,
+    #[storage(3)]
+    data: Vec<u32>,
+}
+
+impl Material2d for MatrixMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/matrix.wgsl".into()
+    }
+}
 
 #[derive(Component)]
 pub struct MatrixSprite;
@@ -13,17 +34,24 @@ pub(super) fn spawn_matrix_sprite(
     mut commands: Commands,
     boards: Query<Entity, Added<Matrix>>,
     mut texture_server: ResMut<Assets<Image>>,
+    mut material_server: ResMut<Assets<MatrixMaterial>>,
+    mut mesh_server: ResMut<Assets<Mesh>>,
+    mino_textures: Res<MinoTextures>,
 ) {
     for e in boards.iter() {
+        let all_textures = stack_images(&mino_textures.view(), &texture_server);
+        let handle = texture_server.add(all_textures);
+        let material = MatrixMaterial {
+            dimensions: MATRIX_DEFAULT_SIZE.as_uvec2(),
+            mino_textures: handle.clone(),
+            data: vec![0; 40 * 10],
+        };
+
+        let mesh_size = MATRIX_DEFAULT_SIZE.as_vec2() * (CELL_SIZE as f32);
         let matrix_sprite = commands
-            .spawn(SpriteBundle {
-                texture: texture_server.add(transparent_texture(
-                    MATRIX_DEFAULT_SIZE.as_uvec2() * CELL_SIZE,
-                )),
-                sprite: Sprite {
-                    flip_y: true,
-                    ..default()
-                },
+            .spawn(MaterialMesh2dBundle {
+                mesh: mesh_server.add(shape::Quad::new(mesh_size).into()).into(),
+                material: material_server.add(material),
                 ..default()
             })
             .insert(MatrixSprite)
@@ -37,23 +65,18 @@ pub(super) fn spawn_matrix_sprite(
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
 pub(super) fn redraw_board(
-    board: Query<(&Matrix, &Children), Changed<Matrix>>,
-    children: Query<&Handle<Image>, With<MatrixSprite>>,
-    mut texture_server: ResMut<Assets<Image>>,
-    mino_textures: Res<MinoTextures>,
+    board: Query<(&Matrix, &Bounds, &Children), Changed<Matrix>>,
+    children: Query<&Handle<MatrixMaterial>, With<MatrixSprite>>,
+    mut material_server: ResMut<Assets<MatrixMaterial>>,
 ) {
-    for (board, ch) in board.iter() {
-        let texture_id = ch.iter().find_map(|c| children.get(*c).ok()).unwrap();
-
-        let mut image = texture_server.get(texture_id).cloned().unwrap();
+    for (board, bounds, ch) in board.iter() {
+        let material_id = ch.iter().find_map(|c| children.get(*c).ok()).unwrap();
+        let material = material_server.get_mut(material_id).unwrap();
 
         for up in board.updates.iter() {
-            let tex = up.kind.select(&mino_textures);
-            let replace_image = texture_server.get(tex).unwrap();
-            copy_from_to(&mut image, replace_image, up.loc);
+            let ix = up.loc.y * bounds.true_bounds.x + up.loc.x;
+            material.data[ix as usize] = up.kind as u32;
         }
-
-        *texture_server.get_mut(texture_id).unwrap() = image;
     }
 }
 

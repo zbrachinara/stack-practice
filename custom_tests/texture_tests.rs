@@ -22,7 +22,7 @@ fn display_each_texture(
     }
 
     let mut atlas_builder = TextureAtlasBuilder::default();
-    for texture in textures.iter() {
+    for texture in textures.view() {
         let id = texture.id();
         let Some(texture) = texture_server.get(id) else {
             return;
