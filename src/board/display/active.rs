@@ -1,5 +1,5 @@
 use bevy::{
-    math::{ivec2, vec2},
+    math::vec2,
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
     sprite::MaterialMesh2dBundle,
@@ -29,7 +29,7 @@ pub(super) fn spawn_active_sprite(
     mut material_server: ResMut<Assets<MatrixMaterial>>,
 ) {
     for e in boards.iter() {
-        let dimensions = (shape_table.bounds[1] - shape_table.bounds[0] + ivec2(1, 1)).as_uvec2();
+        let dimensions = (shape_table.bounds[1] - shape_table.bounds[0]).as_uvec2();
 
         let all_textures = stack_images(&mino_textures.view(), &images);
         let material = MatrixMaterial {
@@ -39,18 +39,18 @@ pub(super) fn spawn_active_sprite(
         };
 
         let lo_f32 = shape_table.bounds[0].as_vec2();
-        let hi_f32 = (shape_table.bounds[1] + IVec2::ONE).as_vec2();
+        let hi_f32 = (shape_table.bounds[1]).as_vec2();
         let mesh = Mesh::new(PrimitiveTopology::TriangleList)
             .with_inserted_attribute(
                 Mesh::ATTRIBUTE_POSITION,
-                dbg!([
+                [
                     lo_f32,
                     vec2(lo_f32.x, hi_f32.y),
                     hi_f32,
                     vec2(hi_f32.x, lo_f32.y),
                 ]
                 .map(|i| i.extend(0.) * (CELL_SIZE as f32))
-                .to_vec()),
+                .to_vec(),
             )
             .with_inserted_attribute(
                 Mesh::ATTRIBUTE_UV_0,
@@ -100,7 +100,7 @@ pub(super) fn display_active(
             let shape = &shape_table.table[&ShapeParameters::from(piece)];
             for &p in shape {
                 let loc = p - shape_table.bounds[0];
-                let ix = loc.y * ((shape_table.bounds[1] - shape_table.bounds[0]).x + 1) + loc.x;
+                let ix = loc.y * ((shape_table.bounds[1] - shape_table.bounds[0]).x) + loc.x;
                 mat.data[ix as usize] = piece.kind as u32;
             }
         } else {

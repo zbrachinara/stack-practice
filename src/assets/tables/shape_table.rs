@@ -34,8 +34,8 @@ impl From<(MinoKind, RotationState)> for ShapeParameters {
 pub struct ShapeTable {
     pub table: HashMap<ShapeParameters, Vec<IVec2>>,
     /// A bounding rectangle on all the coordinates listed in the table. The first coordinate is
-    /// less than or equal to all coordinates in the table, and the second one is greater than or
-    /// equal to all coordinates in the table.
+    /// less than or equal to all coordinates in the table, and the second one is greater than all
+    /// coordinates in the table.
     pub bounds: [IVec2; 2],
 }
 
@@ -52,7 +52,6 @@ impl AssetLoader for ShapeTableLoader {
         reader: &'a mut Reader,
         _: &'a Self::Settings,
         _: &'a mut LoadContext,
-        // ctx: &'a mut LoadContext,
     ) -> bevy::utils::BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             tracing::debug_span!(module_path!());
@@ -66,41 +65,14 @@ impl AssetLoader for ShapeTableLoader {
             let shape_table: HashMap<ShapeParameters, Vec<IVec2>> = ron::de::from_bytes(&bytes)
                 .map_err(|_| "Could not interpret the given shape table")?;
 
-            // let shape_table_ref = &shape_table.0;
-            // let ctx_ref = &ctx;
-            // let finished_assets = join_all(all_shape_parameters().map(|params| async move {
-            //     let mut ctx = ctx_ref.begin_labeled_asset();
-            //     let mut new_tex = transparent_texture(uvec2(CELL_SIZE * 4, CELL_SIZE * 4));
-            //     let src = ctx
-            //         .load_direct(params.kind.path_of())
-            //         .await
-            //         .expect("could not get texture of mino")
-            //         .take()
-            //         .unwrap();
-
-            //     for &p in &shape_table_ref[&params] {
-            //         copy_from_to(&mut new_tex, &src, p)
-            //     }
-
-            //     let asset = ctx.finish(new_tex, None);
-            //     (params, asset)
-            // }))
-            // .await;
-
-            // for (name, loaded_asset) in finished_assets {
-            //     ctx.add_loaded_labeled_asset(name.to_string(), loaded_asset);
-            // }
-
             let (min, max) = shape_table
                 .values()
                 .flatten()
-                .fold((IVec2::ZERO, IVec2::ZERO), |(a, b), &c| {
-                    (a.min(c), b.max(c))
-                });
+                .fold((IVec2::MAX, IVec2::MIN), |(a, b), &c| (a.min(c), b.max(c)));
 
             Ok(ShapeTable {
                 table: shape_table,
-                bounds: [min, max],
+                bounds: [min, max + IVec2::ONE],
             })
         })
     }
