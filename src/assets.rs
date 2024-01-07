@@ -1,3 +1,4 @@
+use bevy::sprite::Material2dPlugin;
 use bevy::{
     app::Plugin,
     asset::{AssetApp, Handle},
@@ -10,9 +11,11 @@ use bevy_asset_loader::{
 };
 use strum::IntoEnumIterator;
 
+pub mod matrix_material;
 pub mod tables;
 
 use crate::{board::MinoKind, state::MainState};
+use crate::assets::matrix_material::MatrixMaterial;
 
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
@@ -65,7 +68,8 @@ impl MinoTextures {
 
 impl Plugin for StackingAssetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.init_asset::<ShapeTable>()
+        app.add_plugins((Material2dPlugin::<MatrixMaterial>::default(),))
+            .init_asset::<ShapeTable>()
             .init_asset::<KickTable>()
             .add_loading_state(
                 LoadingState::new(MainState::Loading).continue_to_state(MainState::Ready),

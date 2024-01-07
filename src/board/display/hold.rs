@@ -2,7 +2,7 @@ use bevy::{math::vec2, prelude::*};
 use tap::Tap;
 
 use crate::assets::tables::QueryShapeTable;
-use crate::board::display::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
+use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 use crate::board::MinoKind;
 use crate::{
     assets::tables::shape_table::ShapeParameters,

@@ -18,6 +18,12 @@ impl Plugin for ScreensPlugin {
                 w.insert_resource(SetCameraScale(id));
             })
             .add_systems(Update, (settings_panel, apply_settings).chain())
+            .add_systems(
+                Update,
+                start_playing
+                    .run_if(in_state(MainState::Ready).or_else(in_state(MainState::PostGame)))
+                    .after(apply_settings),
+            )
             .add_systems(OnExit(MainState::Loading), setup_scene);
     }
 }
@@ -68,7 +74,7 @@ impl TryFrom<&GlobalSettings> for Settings {
 
 fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSettings>) {
     egui::SidePanel::left("settings_panel").show(contexts.ctx_mut(), |ui| {
-        egui::Grid::new("settings_pannel_inner").show(ui, |ui| {
+        egui::Grid::new("settings_panel_inner").show(ui, |ui| {
             duplicate! {
                 [
                     field               display_name;
@@ -89,7 +95,10 @@ fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSetting
     });
 }
 
-pub fn apply_settings(global_settings: Res<GlobalSettings>, mut all_settings: Query<&mut Settings>) {
+pub fn apply_settings(
+    global_settings: Res<GlobalSettings>,
+    mut all_settings: Query<&mut Settings>,
+) {
     if_chain::if_chain! {
         if global_settings.is_changed();
         if let Ok(global) = Settings::try_from(&*global_settings);
@@ -98,5 +107,15 @@ pub fn apply_settings(global_settings: Res<GlobalSettings>, mut all_settings: Qu
                 *s = global.clone()
             }
         }
-    };
+    }
+}
+
+pub fn start_playing(
+    input: Res<Input<KeyCode>>,
+    mut state: ResMut<NextState<MainState>>,
+    settings: Res<GlobalSettings>,
+) {
+    if input.just_pressed(KeyCode::Grave) && Settings::try_from(&*settings).is_ok() {
+        state.0 = Some(MainState::Playing);
+    }
 }

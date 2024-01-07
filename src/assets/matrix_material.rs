@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 use bevy::sprite::{Material2d, MaterialMesh2dBundle, Mesh2dHandle};
+use tap::Pipe;
 
 #[derive(Clone, TypePath, Asset, AsBindGroup)]
 pub struct MatrixMaterial {
@@ -61,17 +62,39 @@ impl<'w, 's> MatrixMaterialSpawner<'w, 's> {
         self.mesh_server.add(mesh_struct).into()
     }
 
-    pub fn spawn_anchored(&mut self, bounds: IVec2) -> EntityCommands<'w, 's, '_> {
+    pub fn spawn_centered(&mut self, bounds: IVec2) -> EntityCommands<'w, 's, '_> {
         self.spawn(IRect::from_center_size(IVec2::ZERO, bounds))
     }
 
+    pub fn spawn_centered_with_data(
+        &mut self,
+        bounds: IVec2,
+        data: Vec<u32>,
+    ) -> EntityCommands<'w, 's, '_> {
+        self.spawn_with_data(IRect::from_center_size(IVec2::ZERO, bounds), data)
+    }
+
     pub fn spawn(&mut self, grid_bounds: IRect) -> EntityCommands<'w, 's, '_> {
+        self.spawn_with_data(
+            grid_bounds,
+            vec![0; grid_bounds.size().pipe(|u| u.x * u.y) as usize],
+        )
+    }
+
+    pub fn spawn_with_data(
+        &mut self,
+        grid_bounds: IRect,
+        data: Vec<u32>,
+    ) -> EntityCommands<'w, 's, '_> {
         let all_textures = stack_images(&self.mino_textures.view(), &self.texture_server);
         let size = grid_bounds.size();
+
+        assert_eq!((size.x * size.y) as usize, data.len());
+
         let material = MatrixMaterial {
             dimensions: grid_bounds.size().as_uvec2(),
             mino_textures: self.texture_server.add(all_textures),
-            data: vec![0; (size.x * size.y) as usize],
+            data,
         };
         let mesh = self.quad_anchored(grid_bounds);
 

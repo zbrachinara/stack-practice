@@ -1,6 +1,6 @@
+use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 use bevy::prelude::*;
 
-use crate::board::display::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 use crate::board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE};
 
 #[derive(Component)]
@@ -13,7 +13,7 @@ pub(super) fn spawn_matrix_sprite(
 ) {
     for e in boards.iter() {
         let matrix_sprite = mesh_spawner
-            .spawn_anchored(MATRIX_DEFAULT_SIZE)
+            .spawn_centered(MATRIX_DEFAULT_SIZE)
             .insert(MatrixSprite)
             .id();
 

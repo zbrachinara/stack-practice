@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy::{ecs::schedule::ScheduleLabel, sprite::Material2dPlugin};
-use matrix_material::MatrixMaterial;
 
 use crate::state::MainState;
 
@@ -21,7 +20,6 @@ mod floor;
 mod hold;
 mod matrix;
 mod queue;
-mod matrix_material;
 
 #[derive(ScheduleLabel, Hash, Debug, PartialEq, Eq, Clone)]
 pub struct SpawnDisplayEntities;
@@ -39,7 +37,6 @@ impl Plugin for BoardDisplayPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugins((
             Material2dPlugin::<DropShadowMaterial>::default(),
-            Material2dPlugin::<MatrixMaterial>::default(),
         ))
         .add_systems(PostUpdate, execute_display_schedule)
         .add_systems(

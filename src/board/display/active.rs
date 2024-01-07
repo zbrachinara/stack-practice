@@ -7,7 +7,7 @@ use crate::{
     board::{Active, Bounds, MinoKind, CELL_SIZE},
 };
 
-use crate::board::display::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
+use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 
 #[derive(Component)]
 pub struct ActiveSprite;
@@ -29,7 +29,7 @@ pub(super) fn spawn_active_sprite(
 }
 
 /// Updates the visual state of the active piece. The active piece is a child of the board,
-/// initialized in the same system that spawns the board. If the active pice becomes `None`, then
+/// initialized in the same system that spawns the board. If the active piece becomes `None`, then
 /// the sprite representing it is hidden. If it is modified in any other way, the sprite's position
 /// and kind will be updated to match.
 pub(super) fn display_active(
