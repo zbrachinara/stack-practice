@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use bevy::math::IRect;
 use bevy::{
     asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, Handle, LoadContext},
     ecs::system::Resource,
@@ -36,7 +37,7 @@ pub struct ShapeTable {
     /// A bounding rectangle on all the coordinates listed in the table. The first coordinate is
     /// less than or equal to all coordinates in the table, and the second one is greater than all
     /// coordinates in the table.
-    pub bounds: [IVec2; 2],
+    pub bounds: IRect,
 }
 
 #[derive(Default)]
@@ -72,7 +73,10 @@ impl AssetLoader for ShapeTableLoader {
 
             Ok(ShapeTable {
                 table: shape_table,
-                bounds: [min, max + IVec2::ONE],
+                bounds: IRect {
+                    max: max + IVec2::ONE,
+                    min,
+                },
             })
         })
     }

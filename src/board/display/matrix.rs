@@ -1,31 +1,7 @@
-use bevy::{
-    prelude::*,
-    render::render_resource::{AsBindGroup, ShaderRef},
-    sprite::{Material2d, MaterialMesh2dBundle},
-};
+use bevy::prelude::*;
 
-use crate::{
-    assets::MinoTextures,
-    board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE},
-    image_tools::stack_images,
-};
-
-#[derive(Clone, TypePath, Asset, AsBindGroup)]
-pub struct MatrixMaterial {
-    #[uniform(0)]
-    pub dimensions: UVec2,
-    #[texture(1, dimension = "2d_array")]
-    #[sampler(2)]
-    pub mino_textures: Handle<Image>,
-    #[storage(3)]
-    pub data: Vec<u32>,
-}
-
-impl Material2d for MatrixMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/matrix.wgsl".into()
-    }
-}
+use crate::board::display::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
+use crate::board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE};
 
 #[derive(Component)]
 pub struct MatrixSprite;
@@ -33,26 +9,11 @@ pub struct MatrixSprite;
 pub(super) fn spawn_matrix_sprite(
     mut commands: Commands,
     boards: Query<Entity, Added<Matrix>>,
-    mut texture_server: ResMut<Assets<Image>>,
-    mut material_server: ResMut<Assets<MatrixMaterial>>,
-    mut mesh_server: ResMut<Assets<Mesh>>,
-    mino_textures: Res<MinoTextures>,
+    mut mesh_spawner: MatrixMaterialSpawner,
 ) {
     for e in boards.iter() {
-        let all_textures = stack_images(&mino_textures.view(), &texture_server);
-        let material = MatrixMaterial {
-            dimensions: MATRIX_DEFAULT_SIZE.as_uvec2(),
-            mino_textures: texture_server.add(all_textures),
-            data: vec![0; 40 * 10],
-        };
-
-        let mesh_size = MATRIX_DEFAULT_SIZE.as_vec2() * (CELL_SIZE as f32);
-        let matrix_sprite = commands
-            .spawn(MaterialMesh2dBundle {
-                mesh: mesh_server.add(shape::Quad::new(mesh_size).into()).into(),
-                material: material_server.add(material),
-                ..default()
-            })
+        let matrix_sprite = mesh_spawner
+            .spawn_anchored(MATRIX_DEFAULT_SIZE)
             .insert(MatrixSprite)
             .id();
 

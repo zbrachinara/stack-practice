@@ -1,20 +1,13 @@
 use bevy::{
-    math::vec2,
     prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
-    sprite::MaterialMesh2dBundle,
 };
 
 use crate::{
-    assets::{
-        tables::{shape_table::ShapeParameters, QueryShapeTable},
-        MinoTextures,
-    },
+    assets::tables::{shape_table::ShapeParameters, QueryShapeTable},
     board::{Active, Bounds, MinoKind, CELL_SIZE},
-    image_tools::stack_images,
 };
 
-use super::matrix::MatrixMaterial;
+use crate::board::display::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 
 #[derive(Component)]
 pub struct ActiveSprite;
@@ -22,48 +15,12 @@ pub struct ActiveSprite;
 pub(super) fn spawn_active_sprite(
     mut commands: Commands,
     boards: Query<Entity, Added<Active>>,
-    mino_textures: Res<MinoTextures>,
+    mut mat_spawner: MatrixMaterialSpawner,
     shape_table: QueryShapeTable,
-    mut images: ResMut<Assets<Image>>,
-    mut mesh_server: ResMut<Assets<Mesh>>,
-    mut material_server: ResMut<Assets<MatrixMaterial>>,
 ) {
     for e in boards.iter() {
-        let dimensions = (shape_table.bounds[1] - shape_table.bounds[0]).as_uvec2();
-
-        let all_textures = stack_images(&mino_textures.view(), &images);
-        let material = MatrixMaterial {
-            dimensions,
-            mino_textures: images.add(all_textures),
-            data: vec![0; (dimensions.x * dimensions.y) as usize],
-        };
-
-        let lo_f32 = shape_table.bounds[0].as_vec2();
-        let hi_f32 = (shape_table.bounds[1]).as_vec2();
-        let mesh = Mesh::new(PrimitiveTopology::TriangleList)
-            .with_inserted_attribute(
-                Mesh::ATTRIBUTE_POSITION,
-                [
-                    lo_f32,
-                    vec2(lo_f32.x, hi_f32.y),
-                    hi_f32,
-                    vec2(hi_f32.x, lo_f32.y),
-                ]
-                .map(|i| i.extend(0.) * (CELL_SIZE as f32))
-                .to_vec(),
-            )
-            .with_inserted_attribute(
-                Mesh::ATTRIBUTE_UV_0,
-                vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            )
-            .with_indices(Some(Indices::U32(vec![0, 3, 1, 1, 3, 2])));
-
-        let active_sprite = commands
-            .spawn(MaterialMesh2dBundle {
-                material: material_server.add(material),
-                mesh: mesh_server.add(mesh).into(),
-                ..default()
-            })
+        let active_sprite = mat_spawner
+            .spawn(shape_table.bounds)
             .insert(ActiveSprite)
             .id();
 
@@ -99,8 +56,8 @@ pub(super) fn display_active(
             mat.data.fill(MinoKind::E as u32);
             let shape = &shape_table.table[&ShapeParameters::from(piece)];
             for &p in shape {
-                let loc = p - shape_table.bounds[0];
-                let ix = loc.y * ((shape_table.bounds[1] - shape_table.bounds[0]).x) + loc.x;
+                let loc = p - shape_table.bounds.min;
+                let ix = loc.y * ((shape_table.bounds.max - shape_table.bounds.min).x) + loc.x;
                 mat.data[ix as usize] = piece.kind as u32;
             }
         } else {

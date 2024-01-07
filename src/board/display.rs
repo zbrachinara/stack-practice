@@ -1,15 +1,16 @@
 use bevy::prelude::*;
 use bevy::{ecs::schedule::ScheduleLabel, sprite::Material2dPlugin};
+use matrix_material::MatrixMaterial;
 
 use crate::state::MainState;
 
 use self::active::spawn_active_sprite;
 use self::hold::spawn_hold_sprite;
-use self::matrix::{spawn_matrix_sprite, MatrixMaterial};
+use self::matrix::spawn_matrix_sprite;
 use self::queue::spawn_queue_sprite;
 use self::{
     active::display_active,
-    floor::{spawn_drop_shadow, update_drop_shadow, DropShadowMaterial},
+    floor::{DropShadowMaterial, spawn_drop_shadow, update_drop_shadow},
     hold::display_held,
     matrix::{center_board, redraw_board},
     queue::display_queue,
@@ -20,6 +21,7 @@ mod floor;
 mod hold;
 mod matrix;
 mod queue;
+mod matrix_material;
 
 #[derive(ScheduleLabel, Hash, Debug, PartialEq, Eq, Clone)]
 pub struct SpawnDisplayEntities;
