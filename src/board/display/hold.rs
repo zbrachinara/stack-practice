@@ -1,29 +1,39 @@
-use bevy::{math::vec2, prelude::*, sprite::Anchor};
+use bevy::{math::vec2, prelude::*};
+use tap::Tap;
 
+use crate::assets::tables::QueryShapeTable;
+use crate::board::display::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
+use crate::board::MinoKind;
 use crate::{
-    assets::tables::{shape_table::ShapeParameters, sprite_table::SpriteTable},
+    assets::tables::shape_table::ShapeParameters,
     board::{Hold, RotationState, CELL_SIZE, MATRIX_DEFAULT_LEGAL_BOUNDS},
 };
 
 #[derive(Component)]
 pub struct HoldSprite;
 
-pub(super) fn spawn_hold_sprite(mut commands: Commands, boards: Query<Entity, Added<Hold>>) {
+pub(super) fn spawn_hold_sprite(
+    mut commands: Commands,
+    boards: Query<Entity, Added<Hold>>,
+    shape_table: QueryShapeTable,
+    mut spawner: MatrixMaterialSpawner,
+) {
     let hold_offset =
-        MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2.0 * vec2(-1., 1.) * CELL_SIZE as f32
-            - vec2(24., 2.);
+        MATRIX_DEFAULT_LEGAL_BOUNDS.as_vec2() / 2.0 * vec2(-1., 1.) * CELL_SIZE as f32;
+    let bounds = shape_table
+        .bounds(|&ShapeParameters { rotation, .. }| rotation == RotationState::Up)
+        .tap_mut(|r| {
+            r.min = -r.size();
+            r.max = IVec2::ZERO;
+        });
+
     for e in boards.iter() {
-        let hold_sprite = commands
-            .spawn(SpriteBundle {
-                sprite: Sprite {
-                    flip_y: true,
-                    anchor: Anchor::TopRight,
-                    ..default()
-                },
-                transform: Transform::from_translation(hold_offset.extend(0.)),
-                ..default()
-            })
-            .insert(HoldSprite)
+        let hold_sprite = spawner
+            .spawn(bounds)
+            .insert((
+                Transform::from_translation(hold_offset.extend(0.)),
+                HoldSprite,
+            ))
             .id();
 
         commands.entity(e).add_child(hold_sprite);
@@ -34,42 +44,46 @@ pub(super) fn spawn_hold_sprite(mut commands: Commands, boards: Query<Entity, Ad
 /// it at its normal color if it is not. The sprite is hidden if the hold slot is empty.
 pub(super) fn display_held(
     hold: Query<(&Hold, &Children), Changed<Hold>>,
-    mut sprites: Query<(&mut Visibility, &mut Sprite, &mut Handle<Image>), With<HoldSprite>>,
-    sprite_table: Res<SpriteTable>,
+    shape_table: QueryShapeTable,
+    mut sprites: Query<(&mut Visibility, &Handle<MatrixMaterial>), With<HoldSprite>>,
+    mut mats: ResMut<Assets<MatrixMaterial>>,
 ) {
+    let bounds =
+        shape_table.bounds(|&ShapeParameters { rotation, .. }| rotation == RotationState::Up);
+    let matrix_size = bounds.size().x;
     for (hold, children) in hold.iter() {
         let child = children
             .iter()
             .copied()
             .find(|&c| sprites.contains(c))
             .unwrap();
-        let (mut vis, mut spr, mut tex) = sprites.get_mut(child).unwrap();
-
-        if let &Hold::Ready(p) | &Hold::Inactive(p) = hold {
-            let selector = ShapeParameters {
-                kind: p,
-                rotation: RotationState::Up,
-            };
-            *tex = sprite_table.0[&selector].clone();
-        }
+        let (mut vis, han) = sprites.get_mut(child).unwrap();
+        let mat = mats.get_mut(han).unwrap();
 
         match hold {
             Hold::Empty => {
                 *vis = Visibility::Hidden;
             }
-            Hold::Inactive(_) => {
+            &Hold::Inactive(kind) | &Hold::Ready(kind) => {
+                mat.data.fill(MinoKind::E as u32);
+
+                let shape = &shape_table.table[&ShapeParameters {
+                    kind,
+                    rotation: RotationState::Up,
+                }];
+                for &p in shape {
+                    let fill_kind = if matches!(hold, Hold::Inactive(_)) {
+                        MinoKind::G
+                    } else {
+                        kind
+                    };
+
+                    let loc = p - bounds.min;
+                    let ix = loc.y * matrix_size + loc.x;
+                    mat.data[ix as usize] = fill_kind as u32;
+                }
+
                 *vis = Visibility::Inherited;
-                let greying = 0.3;
-                spr.color = Color::Rgba {
-                    red: greying,
-                    green: greying,
-                    blue: greying,
-                    alpha: 0.8,
-                };
-            }
-            Hold::Ready(_) => {
-                *vis = Visibility::Inherited;
-                spr.color = Color::WHITE;
             }
         }
     }

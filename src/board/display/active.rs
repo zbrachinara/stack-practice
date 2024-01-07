@@ -20,7 +20,7 @@ pub(super) fn spawn_active_sprite(
 ) {
     for e in boards.iter() {
         let active_sprite = mat_spawner
-            .spawn(shape_table.bounds)
+            .spawn(shape_table.bounds(|_| true))
             .insert(ActiveSprite)
             .id();
 
@@ -41,6 +41,7 @@ pub(super) fn display_active(
     shape_table: QueryShapeTable,
     mut material_server: ResMut<Assets<MatrixMaterial>>,
 ) {
+    let shape_bounds = shape_table.bounds(|_| true);
     for (Active(e), bounds, children) in active.iter() {
         let active_sprite_id = children.iter().copied().find(|&c| sprites.contains(c));
         let (mut vis, mut pos, tex) = sprites.get_mut(active_sprite_id.unwrap()).unwrap();
@@ -56,8 +57,8 @@ pub(super) fn display_active(
             mat.data.fill(MinoKind::E as u32);
             let shape = &shape_table.table[&ShapeParameters::from(piece)];
             for &p in shape {
-                let loc = p - shape_table.bounds.min;
-                let ix = loc.y * ((shape_table.bounds.max - shape_table.bounds.min).x) + loc.x;
+                let loc = p - shape_bounds.min;
+                let ix = loc.y * (shape_bounds.size().x) + loc.x;
                 mat.data[ix as usize] = piece.kind as u32;
             }
         } else {

@@ -34,10 +34,6 @@ impl From<(MinoKind, RotationState)> for ShapeParameters {
 #[derive(serde::Deserialize, Resource, Clone, Debug, Asset, TypePath)]
 pub struct ShapeTable {
     pub table: HashMap<ShapeParameters, Vec<IVec2>>,
-    /// A bounding rectangle on all the coordinates listed in the table. The first coordinate is
-    /// less than or equal to all coordinates in the table, and the second one is greater than all
-    /// coordinates in the table.
-    pub bounds: IRect,
 }
 
 #[derive(Default)]
@@ -66,23 +62,30 @@ impl AssetLoader for ShapeTableLoader {
             let shape_table: HashMap<ShapeParameters, Vec<IVec2>> = ron::de::from_bytes(&bytes)
                 .map_err(|_| "Could not interpret the given shape table")?;
 
-            let (min, max) = shape_table
-                .values()
-                .flatten()
-                .fold((IVec2::MAX, IVec2::MIN), |(a, b), &c| (a.min(c), b.max(c)));
-
-            Ok(ShapeTable {
-                table: shape_table,
-                bounds: IRect {
-                    max: max + IVec2::ONE,
-                    min,
-                },
-            })
+            Ok(ShapeTable { table: shape_table })
         })
     }
 
     fn extensions(&self) -> &[&str] {
         &["shape-table"]
+    }
+}
+
+impl ShapeTable {
+    /// Returns a bounding rectangle on all the coordinates listed in the table. The first coordinate is
+    /// less than or equal to all coordinates in the table, and the second one is greater than all
+    /// coordinates in the table.
+    pub fn bounds<F>(&self, mut filter: F) -> IRect
+    where
+        F: FnMut(&ShapeParameters) -> bool,
+    {
+        let (min, max) = self
+            .table
+            .iter()
+            .filter_map(|(p, q)| filter(p).then_some(q))
+            .flatten()
+            .fold((IVec2::MAX, IVec2::MIN), |(a, b), &c| (a.min(c), b.max(c)));
+        IRect { min, max: max + IVec2::ONE }
     }
 }
 
