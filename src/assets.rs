@@ -20,7 +20,6 @@ use crate::assets::matrix_material::MatrixMaterial;
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
     shape_table::{DefaultShapeTable, ShapeTable, ShapeTableLoader},
-    sprite_table::SpriteTable,
 };
 
 pub struct StackingAssetsPlugin;
@@ -77,7 +76,6 @@ impl Plugin for StackingAssetsPlugin {
             .init_asset_loader::<ShapeTableLoader>()
             .init_asset_loader::<KickTableLoader>()
             .add_collection_to_loading_state::<_, MinoTextures>(MainState::Loading)
-            .add_collection_to_loading_state::<_, SpriteTable>(MainState::Loading)
             .add_collection_to_loading_state::<_, DefaultShapeTable>(MainState::Loading)
             .add_collection_to_loading_state::<_, DefaultKickTable>(MainState::Loading);
     }

@@ -32,20 +32,9 @@ pub struct Controller {
     pub hold: bool,
 }
 
-const REPEAT_START_DELAY: Duration = Duration::from_millis(2000);
-const REPEAT_DELAY: Duration = Duration::from_millis(100);
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct Repeatable {
     repeat_at: Option<Duration>,
-    // initial_delay: Duration,
-    // repeat_delay: Duration,
-}
-
-impl Default for Repeatable {
-    fn default() -> Self {
-        Self { repeat_at: None }
-    }
 }
 
 impl Repeatable {
