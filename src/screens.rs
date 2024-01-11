@@ -1,4 +1,5 @@
 use std::num::{ParseFloatError, ParseIntError};
+use std::time::Duration;
 
 use bevy::{ecs::system::SystemId, prelude::*, utils::thiserror};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
@@ -49,6 +50,10 @@ pub struct GlobalSettings {
     pub gravity_power: String,
     #[default = "0.5"]
     pub lock_delay: String,
+    #[default = "1000"]
+    pub initial_delay: String,
+    #[default = "100"]
+    pub repeat_delay: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -68,6 +73,8 @@ impl TryFrom<&GlobalSettings> for Settings {
             shift_size: value.shift_size.parse()?,
             gravity_power: value.gravity_power.parse()?,
             lock_delay: value.lock_delay.parse()?,
+            initial_delay: Duration::from_millis(value.initial_delay.parse()?),
+            repeat_delay: Duration::from_millis(value.repeat_delay.parse()?),
         })
     }
 }
@@ -82,6 +89,8 @@ fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSetting
                     [shift_size]        ["Shift Size"];
                     [gravity_power]     ["Gravity power"];
                     [lock_delay]        ["Lock Delay"];
+                    [initial_delay]     ["Initial Delay"];
+                    [repeat_delay]      ["Repeat Delay"]
                 ]
                 let mut copy = settings.field.clone();
                 ui.label(display_name);

@@ -1,5 +1,6 @@
 #![allow(clippy::type_complexity)]
 
+use std::time::Duration;
 use bevy::{
     app::{Last, Plugin, PostUpdate, Startup, Update},
     asset::{AssetPath, Handle},
@@ -248,6 +249,10 @@ pub struct Settings {
     pub gravity_power: f32,
     #[default = 0.5]
     pub lock_delay: f32,
+    #[default(_code = "Duration::from_millis(1000)")]
+    pub initial_delay: Duration,
+    #[default(_code = "Duration::from_millis(100)")]
+    pub repeat_delay: Duration,
 }
 
 #[derive(Bundle, Default)]
