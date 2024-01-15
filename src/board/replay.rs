@@ -14,8 +14,10 @@ use super::{
 pub struct ReplayInfo {
     /// The current frame the replay occupies.
     frame: u64,
-    /// Index into the most recently played item in the record.
+    /// Index of the item after the most recently played item in the record.
     ix: usize,
+    /// The index which `ix` needs to reach in order to be on time.
+    next_ix: usize,
     playing: Option<InitialReplayFrame>,
 }
 
@@ -31,31 +33,35 @@ pub struct InitialReplayFrame {
 
 pub fn initialize_replay(mut commands: Commands, mut board: Query<BoardQuery>) {
     board.single_mut().clear_board();
-    commands.insert_resource(ReplayInfo::default());
+    commands.init_resource::<ReplayInfo>();
 }
 
 pub fn cleanup_replay(mut commands: Commands) {
-    commands.remove_resource::<ReplayInfo>()
+    commands.remove_resource::<ReplayInfo>();
+    commands.init_resource::<Record>()
 }
 
-pub fn replay(record: Res<Record>, replay_info: Res<ReplayInfo>, mut board: Query<BoardQuery>) {
+pub fn replay(
+    record: Res<Record>,
+    mut replay_info: ResMut<ReplayInfo>,
+    mut board: Query<BoardQuery>,
+) {
     let mut board = board.single_mut();
-
-    // TODO also account for frame skips
-    record.data[replay_info.ix..]
-        .iter()
-        .filter(|item| item.time == replay_info.frame)
-        .for_each(|item| board.apply_record(item));
+    for item in &record.data[replay_info.ix..replay_info.next_ix] {
+        board.apply_record(item);
+    }
+    replay_info.ix = replay_info.next_ix;
 }
 
-fn advance_frame(mut replay_info: ResMut<ReplayInfo>, time: Res<Time>) {
+fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, time: Res<Time>) {
     if let Some(initial) = &replay_info.playing {
         let current_time = discretized_time(&time);
         let elapsed_time = current_time - initial.real_frame;
         let new_record_frame = initial.record_frame + elapsed_time;
         if new_record_frame != replay_info.frame {
-            // TODO also advance ix
             replay_info.frame = new_record_frame;
+            replay_info.next_ix =
+                record.data[replay_info.ix..].partition_point(|item| item.time <= new_record_frame);
         }
     }
 }
