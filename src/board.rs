@@ -1,6 +1,5 @@
 #![allow(clippy::type_complexity)]
 
-use std::time::Duration;
 use bevy::{
     app::{Last, Plugin, PostUpdate, Startup, Update},
     asset::{AssetPath, Handle},
@@ -29,6 +28,7 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
 };
 use smart_default::SmartDefault;
+use std::time::Duration;
 use tap::Tap;
 
 mod controller;
@@ -239,20 +239,20 @@ struct MatrixUpdate {
     kind: MinoKind,
 }
 
-#[derive(Component, SmartDefault, Clone, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct Settings {
-    #[default = 10.0]
     pub soft_drop_power: f32,
-    #[default = 1]
     pub shift_size: i32,
-    #[default = 0.02]
     pub gravity_power: f32,
-    #[default = 0.5]
     pub lock_delay: f32,
-    #[default(_code = "Duration::from_millis(1000)")]
     pub initial_delay: Duration,
-    #[default(_code = "Duration::from_millis(100)")]
     pub repeat_delay: Duration,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        (&GlobalSettings::default()).try_into().unwrap()
+    }
 }
 
 #[derive(Bundle, Default)]
