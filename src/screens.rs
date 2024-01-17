@@ -73,8 +73,8 @@ impl TryFrom<&GlobalSettings> for Settings {
             shift_size: value.shift_size.parse()?,
             gravity_power: value.gravity_power.parse()?,
             lock_delay: value.lock_delay.parse()?,
-            initial_delay: Duration::from_millis(value.initial_delay.parse()?),
-            repeat_delay: Duration::from_millis(value.repeat_delay.parse()?),
+            initial_delay: value.initial_delay.parse()?,
+            repeat_delay: value.repeat_delay.parse()?,
         })
     }
 }

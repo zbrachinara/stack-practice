@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::board::Settings;
 use crate::screens::GlobalSettings;
 use bevy::prelude::{DetectChanges, Local};
@@ -11,10 +9,8 @@ use bevy::{
 
 #[derive(Resource, Default)]
 pub struct Controller {
-    pub shift_left: bool,
-    pub shift_right: bool,
-    pub repeat_left: bool,
-    pub repeat_right: bool,
+    pub shift_left: u32,
+    pub shift_right: u32,
     repeater_left: Repeatable,
     repeater_right: Repeatable,
 
@@ -34,40 +30,41 @@ pub struct Controller {
 
 #[derive(Clone, Copy, Default)]
 struct Repeatable {
-    repeat_at: Option<Duration>,
+    repeat_at: Option<u32>,
 }
 
 impl Repeatable {
-    fn initial_delay(&self, settings: &Settings) -> Duration {
-        if settings.initial_delay.is_zero() {
+    fn initial_delay(&self, settings: &Settings) -> u32 {
+        if settings.initial_delay == 0 {
             settings.repeat_delay
         } else {
             settings.initial_delay
         }
     }
 
-    fn update(&mut self, time: &Res<Time>, settings: &Settings, activation: bool) -> (bool, bool) {
+    /// Each time this is called, returns the number of activations that should be registered.
+    fn update(&mut self, time: &Res<Time>, settings: &Settings, activation: bool) -> u32 {
         if activation {
             if let Some(time_to_repeat) = self.repeat_at {
-                if time_to_repeat < time.elapsed() {
+                let delta = time.delta().as_millis() as u32;
+                self.repeat_at = Some(delta.abs_diff(time_to_repeat) % settings.repeat_delay);
+                if time_to_repeat < delta {
                     tracing::debug!("registered a repeat activation");
-                    let now = time.elapsed();
-                    self.repeat_at = Some(now + settings.repeat_delay);
-                    return (false, true);
+                    let activations = (delta - time_to_repeat) / settings.repeat_delay + 1;
+                    return activations;
                 }
             } else {
                 // key has been pressed for the first time
                 tracing::debug!("registered a single activation");
-                let now = time.elapsed();
-                self.repeat_at = Some(now + self.initial_delay(settings));
-                return (true, false);
+                self.repeat_at = Some(self.initial_delay(settings));
+                return 1;
             }
         } else {
             // key was released, deactivate repeats
             self.repeat_at = None;
         }
 
-        (false, false)
+        0
     }
 }
 
@@ -109,19 +106,15 @@ pub fn process_input(
     }
 
     // repeatable keys
-    let (shift_left, repeat_left) =
+    // TODO decide for the updater which of these directions should be taken
+    controller.shift_left =
         controller
             .repeater_left
             .update(&time, &cached_settings, keys.pressed(KeyCode::A));
-    let (shift_right, repeat_right) =
+    controller.shift_right =
         controller
             .repeater_right
             .update(&time, &cached_settings, keys.pressed(KeyCode::D));
-
-    controller.shift_left = shift_left;
-    controller.shift_right = shift_right;
-    controller.repeat_left = repeat_left;
-    controller.repeat_right = repeat_right;
 }
 
 pub fn reset_controller(mut controller: ResMut<Controller>) {

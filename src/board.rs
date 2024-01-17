@@ -245,8 +245,8 @@ pub struct Settings {
     pub shift_size: i32,
     pub gravity_power: f32,
     pub lock_delay: f32,
-    pub initial_delay: Duration,
-    pub repeat_delay: Duration,
+    pub initial_delay: u32,
+    pub repeat_delay: u32,
 }
 
 impl Default for Settings {

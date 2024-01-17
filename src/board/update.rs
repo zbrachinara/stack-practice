@@ -113,14 +113,10 @@ impl<'world> BoardQueryItem<'world> {
             })
             .unwrap();
 
-        let shift_size = if controller.shift_left {
-            -std::cmp::min(1, farthest_shift_left)
-        } else if controller.shift_right {
-            std::cmp::min(1, farthest_shift_right)
-        } else if controller.repeat_left {
-            -std::cmp::min(self.settings.shift_size, farthest_shift_left)
-        } else if controller.repeat_right {
-            std::cmp::min(self.settings.shift_size, farthest_shift_right)
+        let shift_size = if controller.shift_left != 0 {
+            -std::cmp::min(controller.shift_left as i32, farthest_shift_left)
+        } else if controller.shift_right != 0 {
+            std::cmp::min(controller.shift_right as i32, farthest_shift_right)
         } else {
             0
         };
