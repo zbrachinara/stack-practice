@@ -28,7 +28,6 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
 };
 use smart_default::SmartDefault;
-use std::time::Duration;
 use tap::Tap;
 
 mod controller;
@@ -242,7 +241,6 @@ struct MatrixUpdate {
 #[derive(Component, Clone, Debug)]
 pub struct Settings {
     pub soft_drop_power: f32,
-    pub shift_size: i32,
     pub gravity_power: f32,
     pub lock_delay: f32,
     pub initial_delay: u32,

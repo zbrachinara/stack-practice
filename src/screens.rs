@@ -1,5 +1,4 @@
 use std::num::{ParseFloatError, ParseIntError};
-use std::time::Duration;
 
 use bevy::{ecs::system::SystemId, prelude::*, utils::thiserror};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
@@ -44,8 +43,6 @@ fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
 pub struct GlobalSettings {
     #[default = "10"]
     pub soft_drop_power: String,
-    #[default = "1"]
-    pub shift_size: String,
     #[default = "0.02"]
     pub gravity_power: String,
     #[default = "0.5"]
@@ -70,7 +67,6 @@ impl TryFrom<&GlobalSettings> for Settings {
     fn try_from(value: &GlobalSettings) -> Result<Self, Self::Error> {
         Ok(Self {
             soft_drop_power: value.soft_drop_power.parse()?,
-            shift_size: value.shift_size.parse()?,
             gravity_power: value.gravity_power.parse()?,
             lock_delay: value.lock_delay.parse()?,
             initial_delay: value.initial_delay.parse()?,
@@ -86,7 +82,6 @@ fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSetting
                 [
                     field               display_name;
                     [soft_drop_power]   ["Soft Drop Power"];
-                    [shift_size]        ["Shift Size"];
                     [gravity_power]     ["Gravity power"];
                     [lock_delay]        ["Lock Delay"];
                     [initial_delay]     ["Initial Delay"];
