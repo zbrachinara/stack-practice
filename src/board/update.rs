@@ -18,7 +18,7 @@ use super::{
     MatrixUpdate, Mino, MinoKind, RotationState, Settings,
 };
 
-/// Checks if the matrix can accomodate the given piece.
+/// Checks if the matrix can accommodate the given piece.
 fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool {
     shape_table.table[&ShapeParameters::from(&mino)]
         .iter()
@@ -89,7 +89,7 @@ impl<'world> BoardQueryItem<'world> {
 
     /// Starting from zero, finds the highest number for which the associated mino (given by `f`) is
     /// within the bounds of the matrix. If there is no such number, `None` is returned. Otherwise,
-    /// the value will always be a nonnegative number.
+    /// the value will always be a non-negative number.
     fn maximum_for_which<F>(&self, table: &ShapeTable, mut f: F) -> Option<i32>
     where
         F: FnMut(i32) -> Mino,
@@ -208,7 +208,7 @@ impl<'world> BoardQueryItem<'world> {
         }
         self.matrix.updates.extend(updates);
 
-        (*self.queue) = default(); // TODO empty the queue instead of filling it with arbitrary data
+        *self.queue = default(); // TODO empty the queue instead of filling it with arbitrary data
     }
 
     pub fn apply_record(&mut self, record: &RecordItem) {
@@ -267,6 +267,7 @@ pub(super) fn update_board(
     controller: Res<Controller>,
     shape_table: QueryShapeTable,
     kick_table: QueryKickTable,
+    time: Res<Time>,
 ) {
     for mut board in boards.iter_mut() {
         if board.active.deref().0.is_none() {
@@ -303,7 +304,7 @@ pub(super) fn update_board(
         // frame at the very least. Later, we may want to rethink this for zero lock delay, if
         // such a thing makes sense.
         if farthest_legal_drop == 0 {
-            board.drop_clock.lock += 1. / 60.;
+            board.drop_clock.lock += time.delta_seconds();
             if board.drop_clock.lock > board.settings.lock_delay {
                 let active = board.take_active();
                 lock_piece(&mut board.matrix, active, &shape_table);

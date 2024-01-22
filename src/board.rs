@@ -1,31 +1,10 @@
 #![allow(clippy::type_complexity)]
 
+use bevy::prelude::*;
 use bevy::{
-    app::{Last, Plugin, PostUpdate, Startup, Update},
-    asset::{AssetPath, Handle},
-    ecs::{
-        bundle::Bundle,
-        component::Component,
-        entity::Entity,
-        event::EventWriter,
-        query::With,
-        schedule::{
-            common_conditions::{in_state, on_event, resource_exists},
-            IntoSystemConfigs, OnEnter,
-        },
-        system::{Commands, Query, Res, Resource, SystemId},
-        world::World,
-    },
-    hierarchy::DespawnRecursiveExt,
+    asset::AssetPath,
+    ecs::system::SystemId,
     math::{ivec2, IVec2},
-    prelude::Deref,
-    render::{
-        color::Color,
-        texture::Image,
-        view::{InheritedVisibility, Visibility},
-    },
-    time::Time,
-    transform::components::{GlobalTransform, Transform},
 };
 use smart_default::SmartDefault;
 use tap::Tap;
@@ -324,7 +303,7 @@ impl From<&Mino> for ShapeParameters {
 pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         app.init_resource::<Controller>()
             .init_resource::<Record>()
             .add_plugins((BoardDisplayPlugin, ReplayPlugin))
