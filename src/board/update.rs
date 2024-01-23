@@ -50,28 +50,12 @@ fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
 
     // register updates made to the board
     let row_size = old_board[0].len();
-    let new_updates = (0..).scan(
-        (
-            -1i32,
-            old_board.into_iter().flat_map(|i| i.into_iter()),
-            matrix.data.iter().flat_map(|i| i.iter()),
-        ),
-        |(offset, old, new), _| {
-            itertools::diff_with(old.clone(), new.clone(), |a, b| a == *b).map(|d| match d {
-                itertools::Diff::FirstMismatch(p, old_next, new_next) => {
-                    *offset += p as i32 + 1;
-                    *old = old_next.into_parts().1.clone();
-                    let (Some(&kind), new_new) = new_next.into_parts() else {
-                        unreachable!()
-                    };
-                    *new = new_new;
-                    let loc = ivec2(*offset % row_size as i32, *offset / row_size as i32);
-                    MatrixUpdate { loc, kind }
-                }
-                _ => unreachable!(),
-            })
-        },
-    );
+    let new_updates = old_board
+        .into_iter()
+        .flat_map(|i| i.into_iter())
+        .zip(matrix.data.iter().flat_map(|i| i.iter().copied()))
+        .zip((0..).map(|ix| ivec2(ix % row_size as i32, ix / row_size as i32)))
+        .filter_map(|((old, new), loc)| (old != new).then_some(MatrixUpdate { loc, kind: new }));
     matrix.updates.extend(new_updates);
 }
 
@@ -219,6 +203,19 @@ impl<'world> BoardQueryItem<'world> {
             Update::MatrixChange { update } => {
                 self.matrix.updates.push(*update);
                 self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.kind;
+            }
+        }
+    }
+
+    /// This function reverses a record which has been previously been applied through [`Self::apply_record`]. This can
+    /// be used, for example, to rewind through a record.
+    pub fn de_apply_record(&mut self, record: &RecordItem) {
+        match &record.data {
+            Update::ActiveChange { new_position } => self.active.0 = *new_position,
+            Update::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
+            Update::Hold { replace_with } => *(self.hold) = *replace_with,
+            Update::MatrixChange { update } => {
+                let reversed_update = todo!();
             }
         }
     }
