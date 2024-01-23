@@ -60,8 +60,14 @@ fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, time:
         let new_record_frame = initial.record_frame + elapsed_time;
         if new_record_frame != replay_info.frame {
             replay_info.frame = new_record_frame;
-            replay_info.next_ix =
-                record.data[replay_info.ix..].partition_point(|item| item.time <= new_record_frame);
+            replay_info.next_ix = record.data[replay_info.ix..]
+                .partition_point(|item| item.time <= new_record_frame)
+                + replay_info.ix;
+        }
+
+        // pause replay after reaching the end of the record
+        if replay_info.ix == record.data.len() {
+            replay_info.playing = None;
         }
     }
 }
