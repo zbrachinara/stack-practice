@@ -149,9 +149,6 @@ impl Hold {
 
 const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
 const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
-/// The amount by which the spawn location of the piece is offset from the bottom left corner of its
-/// texture. This should be uniform for all pieces, hence why it is declared constant here.
-const TEXTURE_CENTER_OFFSET: IVec2 = ivec2(1, 2);
 pub const CELL_SIZE: u32 = 32;
 
 #[derive(Component, SmartDefault)]
@@ -287,7 +284,7 @@ fn start_game(
             board,
             mino: Mino {
                 kind: queue.take(),
-                position: ivec2(4, 22) - TEXTURE_CENTER_OFFSET,
+                position: ivec2(4, 22),
                 rotation: RotationState::Up,
             },
         });
