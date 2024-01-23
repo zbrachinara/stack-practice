@@ -3,19 +3,20 @@ use std::ops::Deref;
 use bevy::prelude::*;
 use bevy::{ecs::query::WorldQuery, math::ivec2};
 use tap::Tap;
+use tracing::Instrument;
 
 use crate::assets::tables::{
     kick_table::{KickParameters, KickTable},
     shape_table::{ShapeParameters, ShapeTable},
     QueryKickTable, QueryShapeTable,
 };
-use crate::board::record::Update;
+use crate::board::record::{Record, Update};
 use crate::state::MainState;
 
 use super::record::RecordItem;
 use super::{
     controller::Controller, queue::PieceQueue, Active, Bounds, DropClock, Hold, Matrix,
-    MatrixUpdate, Mino, MinoKind, RotationState, Settings,
+    MatrixAction, MatrixUpdate, Mino, MinoKind, RotationState, Settings,
 };
 
 /// Checks if the matrix can accommodate the given piece.
@@ -55,7 +56,19 @@ fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
         .flat_map(|i| i.into_iter())
         .zip(matrix.data.iter().flat_map(|i| i.iter().copied()))
         .zip((0..).map(|ix| ivec2(ix % row_size as i32, ix / row_size as i32)))
-        .filter_map(|((old, new), loc)| (old != new).then_some(MatrixUpdate { loc, kind: new }));
+        .filter(|((old, new), _)| old != new)
+        .map(|((_, new), loc)| {
+            let action = if new == MinoKind::E {
+                MatrixAction::Erase
+            } else {
+                MatrixAction::Insert
+            };
+            MatrixUpdate {
+                loc,
+                action,
+                kind: new,
+            }
+        });
     matrix.updates.extend(new_updates);
 }
 
@@ -182,11 +195,12 @@ impl<'world> BoardQueryItem<'world> {
             for (x, cell) in row.iter_mut().enumerate() {
                 let p = ivec2(x as i32, y as i32);
                 if *cell != MinoKind::E {
-                    *cell = MinoKind::E;
                     updates.push(MatrixUpdate {
                         loc: p,
-                        kind: MinoKind::E,
+                        kind: *cell,
+                        action: MatrixAction::Erase,
                     });
+                    *cell = MinoKind::E;
                 }
             }
         }
@@ -202,21 +216,31 @@ impl<'world> BoardQueryItem<'world> {
             Update::Hold { replace_with } => *(self.hold) = *replace_with,
             Update::MatrixChange { update } => {
                 self.matrix.updates.push(*update);
-                self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.kind;
+
+                self.matrix.data[update.loc.y as usize][update.loc.x as usize] =
+                    if update.action == MatrixAction::Insert {
+                        update.kind
+                    } else {
+                        MinoKind::E
+                    };
             }
         }
     }
 
-    /// This function reverses a record which has been previously been applied through [`Self::apply_record`]. This can
+    // FIXME: Queue updates lag one piece behind where they should actually be when reversed
+    // FIXME: Locked pieces don't reverse correctly, there's lag between when the piece is locked and when the active piece shows up
+    /// This function undoes a record which has been previously been applied through [`Self::apply_record`]. This can
     /// be used, for example, to rewind through a record.
-    pub fn de_apply_record(&mut self, record: &RecordItem) {
+    pub fn undo_record(&mut self, record: &RecordItem) {
         match &record.data {
-            Update::ActiveChange { new_position } => self.active.0 = *new_position,
-            Update::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
-            Update::Hold { replace_with } => *(self.hold) = *replace_with,
             Update::MatrixChange { update } => {
-                let reversed_update = todo!();
+                let update = update.invert();
+                self.apply_record(&RecordItem {
+                    data: Update::MatrixChange { update },
+                    time: record.time,
+                }) // TODO this should be cleaner (no need to duplicate time, etc)
             }
+            _ => self.apply_record(record),
         }
     }
 }

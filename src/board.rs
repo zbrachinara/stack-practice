@@ -208,10 +208,29 @@ impl Matrix {
     }
 }
 
+#[rustfmt::ignore]
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum MatrixAction {
+    Insert,
+    Erase,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct MatrixUpdate {
     loc: IVec2,
     kind: MinoKind,
+    action: MatrixAction,
+}
+
+impl MatrixUpdate {
+    fn invert(self) -> Self {
+        let Self { loc, kind, action } = self;
+        let action = match action {
+            MatrixAction::Insert => MatrixAction::Erase,
+            MatrixAction::Erase => MatrixAction::Insert,
+        };
+        Self { loc, kind, action }
+    }
 }
 
 #[derive(Component, Clone, Debug)]

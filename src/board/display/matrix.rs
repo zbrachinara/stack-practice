@@ -1,7 +1,7 @@
 use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 use bevy::prelude::*;
 
-use crate::board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE};
+use crate::board::{Bounds, Matrix, MatrixAction, CELL_SIZE, MATRIX_DEFAULT_SIZE, MinoKind};
 
 #[derive(Component)]
 pub struct MatrixSprite;
@@ -35,7 +35,11 @@ pub(super) fn redraw_board(
 
         for up in board.updates.iter() {
             let ix = up.loc.y * bounds.true_bounds.x + up.loc.x;
-            material.data[ix as usize] = up.kind as u32;
+            material.data[ix as usize] = if up.action == MatrixAction::Erase {
+                MinoKind::E as u32
+            } else {
+                up.kind as u32
+            };
         }
     }
 }

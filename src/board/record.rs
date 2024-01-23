@@ -45,7 +45,7 @@ pub(super) fn record(
     let current_frame = discretized_time(&time);
     let dt = current_frame - first_frame.0;
     for (active, queue, hold, matrix) in state.iter() {
-        if active.is_changed() || active.is_added() {
+        if active.is_changed() {
             record.data.push(RecordItem {
                 data: Update::ActiveChange {
                     new_position: active.0,
@@ -54,7 +54,7 @@ pub(super) fn record(
             })
         }
 
-        if queue.is_changed() || queue.is_added() {
+        if queue.is_changed() {
             record.data.push(RecordItem {
                 data: Update::QueueChange {
                     new_queue: queue.clone(),
@@ -63,7 +63,7 @@ pub(super) fn record(
             })
         }
 
-        if hold.is_changed() || hold.is_added() {
+        if hold.is_changed() {
             record.data.push(RecordItem {
                 data: Update::Hold {
                     replace_with: *hold,
@@ -72,7 +72,7 @@ pub(super) fn record(
             })
         }
 
-        if matrix.is_changed() || matrix.is_added() {
+        if matrix.is_changed() {
             for &up in &matrix.updates {
                 record.data.push(RecordItem {
                     data: Update::MatrixChange { update: up },
