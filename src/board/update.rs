@@ -226,8 +226,6 @@ impl<'world> BoardQueryItem<'world> {
         }
     }
 
-    // FIXME: Queue updates lag one piece behind where they should actually be when time is reversed
-    // FIXME: Locked pieces don't reverse correctly, there's lag between when the piece is locked and when the active piece shows up
     /// This function undoes a record which has been previously been applied through [`Self::apply_record`]. This can
     /// be used, for example, to rewind through a record.
     pub fn undo_record(&mut self, record: &RecordItem) {
