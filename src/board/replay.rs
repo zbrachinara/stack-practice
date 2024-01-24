@@ -1,6 +1,8 @@
 //! Replay code currently depends on the board being unique in the world.
 
+use crate::board::record::RecordData;
 use bevy::prelude::*;
+use duplicate::duplicate;
 
 use crate::state::MainState;
 
@@ -52,8 +54,33 @@ pub fn replay(
     let mut board = board.single_mut();
     if let Some(meta) = replay_info.playing {
         if meta.reverse {
+            // Reaching past next_ix to find the current active piece, hold, and queue. This is necessary because these
+            // properties can span multiple frames past when they are applied. For example, when dealing with updates to
+            // the active piece, the piece may stay in the same position for multiple frames while it locks onto the
+            // floor. However, the record is only on the frame when it touches the floor, not when it locks. Thus, when
+            // we rewind, the board will update to show that the piece has not been placed yet, but the active piece
+            // will not become visible until we get to the first frame it touches the floor (this phenomenon actually
+            // applies to the active piece's position in general, but this illustration is much more vivid, because it
+            // will appear that the board doesn't actually have an active piece).
+            let search = &record.data[..replay_info.next_ix];
+            duplicate! {
+                [
+                    Match; [ActiveChange]; [Hold]; [QueueChange];
+                ]
+
+                if let Some(update) = search
+                    .iter()
+                    .rev()
+                    .find(|i| matches!(i.data, RecordData::Match { .. }))
+                {
+                    board.apply_record(update);
+                }
+            }
+
+            // matrix changes can be applied immediately
             for item in record.data[replay_info.next_ix..replay_info.ix]
                 .iter()
+                .filter(|i| matches!(i.data, RecordData::MatrixChange { .. }))
                 .rev()
             {
                 board.undo_record(item);
@@ -64,9 +91,6 @@ pub fn replay(
             }
         }
     }
-    // if replay_info.playing.is_some_and(|meta| meta.reverse) {
-    // } else if replay_info.playing.is_some() {
-    // }
     replay_info.ix = replay_info.next_ix;
 }
 

@@ -3,14 +3,13 @@ use std::ops::Deref;
 use bevy::prelude::*;
 use bevy::{ecs::query::WorldQuery, math::ivec2};
 use tap::Tap;
-use tracing::Instrument;
 
 use crate::assets::tables::{
     kick_table::{KickParameters, KickTable},
     shape_table::{ShapeParameters, ShapeTable},
     QueryKickTable, QueryShapeTable,
 };
-use crate::board::record::{Record, Update};
+use crate::board::record::RecordData;
 use crate::state::MainState;
 
 use super::record::RecordItem;
@@ -211,10 +210,10 @@ impl<'world> BoardQueryItem<'world> {
 
     pub fn apply_record(&mut self, record: &RecordItem) {
         match &record.data {
-            Update::ActiveChange { new_position } => self.active.0 = *new_position,
-            Update::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
-            Update::Hold { replace_with } => *(self.hold) = *replace_with,
-            Update::MatrixChange { update } => {
+            RecordData::ActiveChange { new_position } => self.active.0 = *new_position,
+            RecordData::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
+            RecordData::Hold { replace_with } => *(self.hold) = *replace_with,
+            RecordData::MatrixChange { update } => {
                 self.matrix.updates.push(*update);
 
                 self.matrix.data[update.loc.y as usize][update.loc.x as usize] =
@@ -227,16 +226,16 @@ impl<'world> BoardQueryItem<'world> {
         }
     }
 
-    // FIXME: Queue updates lag one piece behind where they should actually be when reversed
+    // FIXME: Queue updates lag one piece behind where they should actually be when time is reversed
     // FIXME: Locked pieces don't reverse correctly, there's lag between when the piece is locked and when the active piece shows up
     /// This function undoes a record which has been previously been applied through [`Self::apply_record`]. This can
     /// be used, for example, to rewind through a record.
     pub fn undo_record(&mut self, record: &RecordItem) {
         match &record.data {
-            Update::MatrixChange { update } => {
+            RecordData::MatrixChange { update } => {
                 let update = update.invert();
                 self.apply_record(&RecordItem {
-                    data: Update::MatrixChange { update },
+                    data: RecordData::MatrixChange { update },
                     time: record.time,
                 }) // TODO this should be cleaner (no need to duplicate time, etc)
             }

@@ -17,11 +17,11 @@ pub struct Record {
 #[derive(Debug)]
 pub struct RecordItem {
     pub time: u64,
-    pub data: Update,
+    pub data: RecordData,
 }
 
 #[derive(Debug)]
-pub enum Update {
+pub enum RecordData {
     ActiveChange { new_position: Option<Mino> },
     QueueChange { new_queue: PieceQueue },
     Hold { replace_with: Hold },
@@ -47,7 +47,7 @@ pub(super) fn record(
     for (active, queue, hold, matrix) in state.iter() {
         if active.is_changed() {
             record.data.push(RecordItem {
-                data: Update::ActiveChange {
+                data: RecordData::ActiveChange {
                     new_position: active.0,
                 },
                 time: dt,
@@ -56,7 +56,7 @@ pub(super) fn record(
 
         if queue.is_changed() {
             record.data.push(RecordItem {
-                data: Update::QueueChange {
+                data: RecordData::QueueChange {
                     new_queue: queue.clone(),
                 },
                 time: dt,
@@ -65,7 +65,7 @@ pub(super) fn record(
 
         if hold.is_changed() {
             record.data.push(RecordItem {
-                data: Update::Hold {
+                data: RecordData::Hold {
                     replace_with: *hold,
                 },
                 time: dt,
@@ -75,7 +75,7 @@ pub(super) fn record(
         if matrix.is_changed() {
             for &up in &matrix.updates {
                 record.data.push(RecordItem {
-                    data: Update::MatrixChange { update: up },
+                    data: RecordData::MatrixChange { update: up },
                     time: dt,
                 })
             }
