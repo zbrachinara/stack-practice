@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::ops::Index;
 
 use bevy::math::IRect;
 use bevy::{
@@ -10,7 +11,7 @@ use bevy::{
 };
 use bevy_asset_loader::asset_collection::AssetCollection;
 
-use crate::board::{MinoKind, RotationState};
+use crate::board::{Mino, MinoKind, RotationState};
 
 #[derive(serde::Deserialize, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 #[serde(from = "(MinoKind, RotationState)")]
@@ -31,9 +32,16 @@ impl From<(MinoKind, RotationState)> for ShapeParameters {
     }
 }
 
+impl From<Mino> for ShapeParameters {
+    fn from(Mino { kind, rotation, .. }: Mino) -> Self {
+        ShapeParameters { kind, rotation }
+    }
+}
+
+
 #[derive(serde::Deserialize, Resource, Clone, Debug, Asset, TypePath)]
 pub struct ShapeTable {
-    pub table: HashMap<ShapeParameters, Vec<IVec2>>,
+    table: HashMap<ShapeParameters, Vec<IVec2>>,
 }
 
 #[derive(Default)]
@@ -88,6 +96,23 @@ impl ShapeTable {
         IRect { min, max: max + IVec2::ONE }
     }
 }
+
+impl Index<ShapeParameters> for ShapeTable {
+    type Output = Vec<IVec2>;
+
+    fn index(&self, index: ShapeParameters) -> &Self::Output {
+        &self.table[&index]
+    }
+}
+
+impl Index<Mino> for ShapeTable {
+    type Output = Vec<IVec2>;
+
+    fn index(&self, index: Mino) -> &Self::Output {
+        &self[ShapeParameters::from(index)]
+    }
+}
+
 
 #[derive(Resource, AssetCollection)]
 pub struct DefaultShapeTable {

@@ -6,7 +6,7 @@ use bevy::render::render_resource::{
 use bevy::sprite::{Material2d, MaterialMesh2dBundle};
 use bevy::utils::HashSet;
 
-use crate::assets::tables::{shape_table::ShapeParameters, QueryShapeTable};
+use crate::assets::tables::QueryShapeTable;
 
 use crate::board::{Active, Matrix, CELL_SIZE, MATRIX_DEFAULT_LEGAL_BOUNDS};
 
@@ -83,7 +83,7 @@ pub(super) fn update_drop_shadow(
             let material = mats.get_mut(child).unwrap();
             let image = images.get_mut(material.base.clone()).unwrap();
 
-            let contained: HashSet<_> = shape_table.table[&ShapeParameters::from(&active)]
+            let contained: HashSet<_> = shape_table[active]
                 .iter()
                 .map(|&p| (p + active.position).x as usize)
                 .collect();

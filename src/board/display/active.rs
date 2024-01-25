@@ -1,9 +1,7 @@
-use bevy::{
-    prelude::*,
-};
+use bevy::prelude::*;
 
 use crate::{
-    assets::tables::{shape_table::ShapeParameters, QueryShapeTable},
+    assets::tables::QueryShapeTable,
     board::{Active, Bounds, MinoKind, CELL_SIZE},
 };
 
@@ -55,7 +53,7 @@ pub(super) fn display_active(
             pos.translation = new_pos.extend(1.0);
 
             mat.data.fill(MinoKind::E as u32);
-            let shape = &shape_table.table[&ShapeParameters::from(piece)];
+            let shape = &shape_table[*piece];
             for &p in shape {
                 let loc = p - shape_bounds.min;
                 let ix = loc.y * (shape_bounds.size().x) + loc.x;

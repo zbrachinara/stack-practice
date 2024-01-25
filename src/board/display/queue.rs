@@ -74,7 +74,7 @@ pub(super) fn display_queue(
                 rotation: RotationState::Up,
                 kind,
             };
-            let shape = &shape_table.table[&selector];
+            let shape = &shape_table[selector];
 
             material.data.fill(MinoKind::E as u32);
             for &p in shape {

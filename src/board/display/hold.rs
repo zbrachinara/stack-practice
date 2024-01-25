@@ -1,8 +1,8 @@
 use bevy::{math::vec2, prelude::*};
 use tap::Tap;
 
-use crate::assets::tables::QueryShapeTable;
 use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
+use crate::assets::tables::QueryShapeTable;
 use crate::board::MinoKind;
 use crate::{
     assets::tables::shape_table::ShapeParameters,
@@ -67,7 +67,7 @@ pub(super) fn display_held(
             &Hold::Inactive(kind) | &Hold::Ready(kind) => {
                 mat.data.fill(MinoKind::E as u32);
 
-                let shape = &shape_table.table[&ShapeParameters {
+                let shape = &shape_table[ShapeParameters {
                     kind,
                     rotation: RotationState::Up,
                 }];

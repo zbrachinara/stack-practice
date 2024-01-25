@@ -16,11 +16,7 @@ mod record;
 mod replay;
 mod update;
 
-use crate::{
-    assets::{tables::shape_table::ShapeParameters, MinoTextures},
-    screens::GlobalSettings,
-    state::MainState,
-};
+use crate::{assets::MinoTextures, screens::GlobalSettings, state::MainState};
 
 use self::{
     controller::{process_input, reset_controller, Controller},
@@ -125,10 +121,10 @@ impl RotationState {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Mino {
-    kind: MinoKind,
-    position: IVec2,
-    rotation: RotationState,
+pub struct Mino {
+    pub kind: MinoKind,
+    pub position: IVec2,
+    pub rotation: RotationState,
 }
 
 #[derive(Component, Default, Clone, Copy, Debug)]
@@ -307,12 +303,6 @@ fn start_game(
                 rotation: RotationState::Up,
             },
         });
-    }
-}
-
-impl From<&Mino> for ShapeParameters {
-    fn from(&Mino { kind, rotation, .. }: &Mino) -> Self {
-        ShapeParameters { kind, rotation }
     }
 }
 
