@@ -9,6 +9,7 @@ use crate::assets::tables::{
     shape_table::{ShapeParameters, ShapeTable},
     QueryKickTable, QueryShapeTable,
 };
+use crate::board::controller::RotateCommand;
 use crate::board::record::RecordData;
 use crate::state::MainState;
 
@@ -132,39 +133,35 @@ impl<'world> BoardQueryItem<'world> {
         shape_table: &ShapeTable,
     ) -> bool {
         let original_rotation = self.active().rotation;
-        let rotation = if controller.rotate_180 {
-            Some(original_rotation.rotate_180())
-        } else if controller.rotate_left {
-            Some(original_rotation.rotate_left())
-        } else if controller.rotate_right {
-            Some(original_rotation.rotate_right())
-        } else {
-            None
+        let Some(new_rotation) = controller.rotation.map(|command| match command {
+            RotateCommand::Left => original_rotation.rotate_left(),
+            RotateCommand::Right => original_rotation.rotate_right(),
+            RotateCommand::R180 => original_rotation.rotate_180(),
+        }) else {
+            return false;
         };
 
-        if let Some(new_rotation) = rotation {
-            let kick_params = KickParameters {
-                kind: self.active().kind,
-                from: original_rotation,
-                to: new_rotation,
-            };
-            let kicks = kick_table.0.get(&kick_params);
-            let offsets =
-                std::iter::once(ivec2(0, 0)).chain(kicks.iter().flat_map(|p| p.iter()).copied());
+        let kick_params = KickParameters {
+            kind: self.active().kind,
+            from: original_rotation,
+            to: new_rotation,
+        };
+        let kicks = kick_table.0.get(&kick_params);
+        let offsets =
+            std::iter::once(ivec2(0, 0)).chain(kicks.iter().flat_map(|p| p.iter()).copied());
 
-            let successful_rot = offsets
-                .map(|o| {
-                    self.active().tap_mut(|m| {
-                        m.rotation = new_rotation;
-                        m.position += o;
-                    })
+        let successful_rot = offsets
+            .map(|o| {
+                self.active().tap_mut(|m| {
+                    m.rotation = new_rotation;
+                    m.position += o;
                 })
-                .find(|m| has_free_space(self.matrix.deref(), *m, shape_table));
+            })
+            .find(|m| has_free_space(self.matrix.deref(), *m, shape_table));
 
-            if let Some(successful_rot) = successful_rot {
-                *self.active_mut() = successful_rot;
-                return true;
-            }
+        if let Some(successful_rot) = successful_rot {
+            *self.active_mut() = successful_rot;
+            return true;
         }
 
         false

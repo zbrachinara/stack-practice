@@ -7,6 +7,12 @@ use bevy::{
     time::Time,
 };
 
+#[rustfmt::skip]
+#[derive(Copy, Clone)]
+pub enum RotateCommand {
+    Left, Right, R180,
+}
+
 #[derive(Resource, Default)]
 pub struct Controller {
     pub shift_left: u32,
@@ -21,9 +27,7 @@ pub struct Controller {
     /// here is that, if the piece is embedded in a wheel (like a driving wheel), the wheel is
     /// rotated to the left, and the piece along with it. How exactly the piece is "embedded in that
     /// wheel", so to speak, is encoded by the shape table.
-    pub rotate_left: bool,
-    pub rotate_right: bool,
-    pub rotate_180: bool,
+    pub rotation: Option<RotateCommand>,
 
     pub hold: bool,
 }
@@ -85,13 +89,13 @@ pub fn process_input(
         controller.soft_drop = true;
     }
     if keys.just_pressed(KeyCode::Comma) {
-        controller.rotate_left = true;
+        controller.rotation = Some(RotateCommand::Left);
     }
     if keys.just_pressed(KeyCode::Slash) {
-        controller.rotate_right = true;
+        controller.rotation = Some(RotateCommand::Right);
     }
     if keys.just_pressed(KeyCode::Period) {
-        controller.rotate_180 = true;
+        controller.rotation = Some(RotateCommand::R180);
     }
     if keys.just_pressed(KeyCode::Tab) {
         controller.hold = true;
