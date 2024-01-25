@@ -15,8 +15,9 @@ pub enum RotateCommand {
 
 #[derive(Resource, Default)]
 pub struct Controller {
-    pub shift_left: u32,
-    pub shift_right: u32,
+    // pub shift_left: u32,
+    // pub shift_right: u32,
+    pub shift: i32,
     repeater_left: Repeatable,
     repeater_right: Repeatable,
 
@@ -34,6 +35,8 @@ pub struct Controller {
 
 #[derive(Clone, Copy, Default)]
 struct Repeatable {
+    /// Used to determine which repeater activated first.
+    activated_at: f32,
     repeat_at: Option<u32>,
 }
 
@@ -61,6 +64,7 @@ impl Repeatable {
                 // key has been pressed for the first time
                 tracing::debug!("registered a single activation");
                 self.repeat_at = Some(self.initial_delay(settings));
+                self.activated_at = time.elapsed_seconds_wrapped();
                 return 1;
             }
         } else {
@@ -110,15 +114,27 @@ pub fn process_input(
     }
 
     // repeatable keys
-    // TODO decide for the updater which of these directions should be taken
-    controller.shift_left =
-        controller
+    let shift_left =
+        -(controller
             .repeater_left
-            .update(&time, &cached_settings, keys.pressed(KeyCode::A));
-    controller.shift_right =
+            .update(&time, &cached_settings, keys.pressed(KeyCode::A)) as i32);
+    let shift_right =
         controller
             .repeater_right
-            .update(&time, &cached_settings, keys.pressed(KeyCode::D));
+            .update(&time, &cached_settings, keys.pressed(KeyCode::D)) as i32;
+
+    // if both left and right shift is active, take the one activated latest, or, if they were activated around the same
+    // time, prefer left.
+    if controller.repeater_left.repeat_at.is_some() && controller.repeater_right.repeat_at.is_some()
+    {
+        if controller.repeater_left.activated_at < controller.repeater_right.activated_at {
+            controller.shift = shift_right;
+        } else {
+            controller.shift = shift_left;
+        }
+    } else {
+        controller.shift = shift_left + shift_right;
+    }
 }
 
 pub fn reset_controller(mut controller: ResMut<Controller>) {

@@ -6,7 +6,7 @@ use tap::Tap;
 
 use crate::assets::tables::{
     kick_table::{KickParameters, KickTable},
-    shape_table::{ShapeParameters, ShapeTable},
+    shape_table::ShapeTable,
     QueryKickTable, QueryShapeTable,
 };
 use crate::board::controller::RotateCommand;
@@ -99,7 +99,7 @@ impl<'world> BoardQueryItem<'world> {
     /// If the controller requests that the active piece is shifted, the piece will be shifted and
     /// marked as modified. Returns true if the shift was successful.
     fn do_shift(&mut self, controller: &Controller, shape_table: &ShapeTable) -> bool {
-        let farthest_shift_left = self
+        let farthest_shift_left = -self
             .maximum_for_which(shape_table, |x| {
                 self.active().tap_mut(|p| p.position.x -= x)
             })
@@ -110,13 +110,9 @@ impl<'world> BoardQueryItem<'world> {
             })
             .unwrap();
 
-        let shift_size = if controller.shift_left != 0 {
-            -std::cmp::min(controller.shift_left as i32, farthest_shift_left)
-        } else if controller.shift_right != 0 {
-            std::cmp::min(controller.shift_right as i32, farthest_shift_right)
-        } else {
-            0
-        };
+        let shift_size = controller
+            .shift
+            .clamp(farthest_shift_left, farthest_shift_right);
 
         if shift_size != 0 {
             self.active_mut().position.x += shift_size;
