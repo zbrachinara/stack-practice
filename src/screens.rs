@@ -1,6 +1,7 @@
 use std::num::{ParseFloatError, ParseIntError};
 
 use bevy::{ecs::system::SystemId, prelude::*, utils::thiserror};
+use bevy_egui::egui::{Key, TextEdit};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use duplicate::duplicate;
 use smart_default::SmartDefault;
@@ -75,8 +76,15 @@ impl TryFrom<&GlobalSettings> for Settings {
     }
 }
 
-fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSettings>) {
+fn settings_panel(
+    mut contexts: EguiContexts,
+    mut settings: ResMut<GlobalSettings>,
+) {
     egui::SidePanel::left("settings_panel").show(contexts.ctx_mut(), |ui| {
+        let had_focus = ui.memory(|e| e.focus().is_some());
+        let tab_pressed = ui.input(|i| i.key_pressed(Key::Tab));
+        let must_surrender = !had_focus && tab_pressed;
+
         egui::Grid::new("settings_panel_inner").show(ui, |ui| {
             duplicate! {
                 [
@@ -89,7 +97,12 @@ fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSetting
                 ]
                 let mut copy = settings.field.clone();
                 ui.label(display_name);
-                ui.text_edit_singleline(&mut copy);
+
+                let text_edit = ui.add(TextEdit::singleline(&mut copy));
+                if must_surrender {
+                    text_edit.surrender_focus();
+                }
+
                 if settings.field != copy {
                     settings.field = copy;
                 }
