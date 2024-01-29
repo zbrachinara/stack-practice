@@ -1,11 +1,5 @@
-use bevy::{
-    app::{App, PluginGroup},
-    asset::AssetPlugin,
-    utils::default,
-    DefaultPlugins,
-};
-
-use stack_practice::*;
+use bevy::prelude::*;
+use stack_practice::StackPracticePlugins;
 
 fn main() {
     App::new()
@@ -14,10 +8,7 @@ fn main() {
                 watch_for_changes_override: Some(false),
                 ..default()
             }),
-            assets::StackingAssetsPlugin,
-            board::BoardPlugin,
-            state::StatePlugin,
-            screens::ScreensPlugin,
+            StackPracticePlugins,
         ))
         .run();
 }

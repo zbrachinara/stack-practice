@@ -1,6 +1,7 @@
 use std::num::{ParseFloatError, ParseIntError};
 
-use bevy::{ecs::system::SystemId, prelude::*, utils::thiserror};
+use bevy::prelude::*;
+use bevy::utils::thiserror;
 use bevy_egui::egui::{Key, TextEdit};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use duplicate::duplicate;
@@ -14,10 +15,6 @@ impl Plugin for ScreensPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin)
             .init_resource::<GlobalSettings>()
-            .add_systems(Startup, |w: &mut World| {
-                let id = w.register_system(set_camera_scale);
-                w.insert_resource(SetCameraScale(id));
-            })
             .add_systems(Update, (settings_panel, apply_settings).chain())
             .add_systems(
                 Update,
@@ -29,15 +26,8 @@ impl Plugin for ScreensPlugin {
     }
 }
 
-fn setup_scene(mut commands: Commands, scale_system: Res<SetCameraScale>) {
+fn setup_scene(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
-    commands.run_system(scale_system.0);
-}
-
-#[derive(Resource)]
-struct SetCameraScale(SystemId);
-fn set_camera_scale(mut camera: Query<&mut OrthographicProjection>) {
-    camera.single_mut().scale = 2.0;
 }
 
 #[derive(Resource, SmartDefault)]
@@ -76,10 +66,7 @@ impl TryFrom<&GlobalSettings> for Settings {
     }
 }
 
-fn settings_panel(
-    mut contexts: EguiContexts,
-    mut settings: ResMut<GlobalSettings>,
-) {
+fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSettings>) {
     egui::SidePanel::left("settings_panel").show(contexts.ctx_mut(), |ui| {
         let had_focus = ui.memory(|e| e.focus().is_some());
         let tab_pressed = ui.input(|i| i.key_pressed(Key::Tab));

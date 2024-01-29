@@ -1,5 +1,6 @@
 //! Replay code currently depends on the board being unique in the world.
 
+use crate::animation::{CameraZoom, DEFAULT_CAMERA_ZOOM, REPLAY_CAMERA_ZOOM};
 use crate::board::record::RecordData;
 use bevy::prelude::*;
 use duplicate::duplicate;
@@ -36,7 +37,13 @@ pub struct ActiveReplayMeta {
     reverse: bool,
 }
 
-pub fn initialize_replay(mut commands: Commands, record: Res<Record>) {
+pub fn initialize_replay(
+    mut commands: Commands,
+    record: Res<Record>,
+    mut zoom: ResMut<CameraZoom>,
+) {
+    **zoom = REPLAY_CAMERA_ZOOM;
+
     let last_frame = record.data.last().unwrap().time;
     let last_ix = record.data.len();
 
@@ -49,7 +56,9 @@ pub fn initialize_replay(mut commands: Commands, record: Res<Record>) {
     commands.insert_resource(replay_info);
 }
 
-pub fn cleanup_replay(mut commands: Commands) {
+pub fn cleanup_replay(mut commands: Commands, mut zoom: ResMut<CameraZoom>) {
+    **zoom = DEFAULT_CAMERA_ZOOM;
+
     commands.remove_resource::<ReplayInfo>();
     commands.init_resource::<Record>()
 }
