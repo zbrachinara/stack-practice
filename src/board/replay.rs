@@ -12,7 +12,7 @@ use super::{
 };
 
 /// Stores information about the state of the replay (i.e. paused or played, frames progressed).
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct ReplayInfo {
     /// The current frame the replay occupies.
     frame: u64,
@@ -36,9 +36,17 @@ pub struct ActiveReplayMeta {
     reverse: bool,
 }
 
-pub fn initialize_replay(mut commands: Commands, mut board: Query<BoardQuery>) {
-    board.single_mut().clear_board();
-    commands.init_resource::<ReplayInfo>();
+pub fn initialize_replay(mut commands: Commands, record: Res<Record>) {
+    let last_frame = record.data.last().unwrap().time;
+    let last_ix = record.data.len();
+
+    let replay_info = ReplayInfo {
+        frame: last_frame,
+        ix: last_ix,
+        next_ix: last_ix,
+        playing: None,
+    };
+    commands.insert_resource(replay_info);
 }
 
 pub fn cleanup_replay(mut commands: Commands) {
