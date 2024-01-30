@@ -101,7 +101,7 @@ pub fn process_input(
     if keys.just_pressed(KeyCode::Period) {
         controller.rotation = Some(RotateCommand::R180);
     }
-    if keys.just_pressed(KeyCode::Tab) {
+    if keys.just_pressed(KeyCode::ShiftLeft) {
         controller.hold = true;
     }
 
