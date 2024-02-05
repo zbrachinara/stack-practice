@@ -7,6 +7,7 @@ use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use duplicate::duplicate;
 use smart_default::SmartDefault;
 
+use crate::progress_bar::{ProgressBar, ProgressBarBundle, ProgressBarMaterial};
 use crate::{board::Settings, state::MainState};
 
 pub struct ScreensPlugin;
@@ -15,6 +16,7 @@ impl Plugin for ScreensPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin)
             .init_resource::<GlobalSettings>()
+            .add_systems(Startup, setup_progress_bar)
             .add_systems(Update, (settings_panel, apply_settings).chain())
             .add_systems(
                 Update,
@@ -64,6 +66,28 @@ impl TryFrom<&GlobalSettings> for Settings {
             repeat_delay: value.repeat_delay.parse()?,
         })
     }
+}
+fn setup_progress_bar(mut commands: Commands, mut materials: ResMut<Assets<ProgressBarMaterial>>) {
+    let bar = ProgressBar {
+        progress: 0.0,
+        sections: vec![(200, Color::RED), (400, Color::BLUE), (300, Color::GREEN)],
+        ..default()
+    };
+    let style = Style {
+        position_type: PositionType::Absolute,
+        height: Val::Percent(100.0),
+        width: Val::Px(2.0),
+        right: Val::Percent(5.0),
+        ..default()
+    };
+    commands.spawn(ProgressBarBundle {
+        progressbar: bar,
+        material_node_bundle: MaterialNodeBundle {
+            material: materials.add(default()),
+            style,
+            ..default()
+        },
+    });
 }
 
 fn settings_panel(mut contexts: EguiContexts, mut settings: ResMut<GlobalSettings>) {
