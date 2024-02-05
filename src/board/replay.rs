@@ -2,6 +2,7 @@
 
 use crate::animation::{CameraZoom, DEFAULT_CAMERA_ZOOM, REPLAY_CAMERA_ZOOM};
 use crate::board::record::RecordData;
+use crate::progress_bar::{ProgressBar, ProgressBarBundle, ProgressBarMaterial};
 use bevy::prelude::*;
 use duplicate::duplicate;
 
@@ -35,6 +36,42 @@ pub struct ActiveReplayMeta {
     real_frame: u64,
     /// The current replay's direction through time (`false` is forward, `true` is backward).
     reverse: bool,
+}
+
+#[derive(Component)]
+pub struct ReplayBar;
+
+fn setup_progress_bar(mut commands: Commands, mut materials: ResMut<Assets<ProgressBarMaterial>>) {
+    let style = Style {
+        position_type: PositionType::Absolute,
+        height: Val::Percent(95.0),
+        width: Val::Px(2.0),
+        right: Val::Percent(5.0),
+        top: Val::Percent(2.5),
+        ..default()
+    };
+    commands
+        .spawn(ProgressBarBundle {
+            progressbar: default(),
+            material_node_bundle: MaterialNodeBundle {
+                material: materials.add(default()),
+                style,
+                ..default()
+            },
+        })
+        .insert(ReplayBar);
+}
+
+fn remove_progress_bar(mut commands: Commands, bar: Query<Entity, With<ReplayBar>>) {
+    commands.entity(bar.single()).despawn_recursive();
+}
+
+fn update_progress(
+    mut bar: Query<&mut ProgressBar, With<ReplayBar>>,
+    info: Res<ReplayInfo>,
+    record: Res<Record>,
+) {
+    bar.single_mut().progress = info.frame as f32 / record.data.last().unwrap().time as f32;
 }
 
 pub fn initialize_replay(
@@ -192,11 +229,17 @@ impl Plugin for ReplayPlugin {
         )
         .add_systems(
             PostUpdate,
-            (adjust_replay, advance_frame)
+            (adjust_replay, advance_frame, update_progress)
                 .chain()
                 .run_if(in_state(MainState::PostGame)),
         )
-        .add_systems(OnEnter(MainState::PostGame), initialize_replay)
-        .add_systems(OnExit(MainState::PostGame), cleanup_replay);
+        .add_systems(
+            OnEnter(MainState::PostGame),
+            (initialize_replay, setup_progress_bar),
+        )
+        .add_systems(
+            OnExit(MainState::PostGame),
+            (cleanup_replay, remove_progress_bar),
+        );
     }
 }
