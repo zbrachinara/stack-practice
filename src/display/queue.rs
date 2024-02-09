@@ -3,8 +3,8 @@ use bevy::{math::vec2, prelude::*};
 use itertools::Itertools;
 use tap::Tap;
 
-use crate::assets::tables::QueryShapeTable;
 use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
+use crate::assets::tables::QueryShapeTable;
 use crate::board::MinoKind;
 use crate::{
     assets::tables::shape_table::ShapeParameters,
@@ -14,7 +14,7 @@ use crate::{
 #[derive(Component)]
 pub struct QueueSprite(usize);
 
-pub(super) fn spawn_queue_sprite(
+pub(crate) fn spawn_queue_sprite(
     mut commands: Commands,
     mut spawner: MatrixMaterialSpawner,
     shape_table: QueryShapeTable,
@@ -49,7 +49,7 @@ pub(super) fn spawn_queue_sprite(
 // TODO: This function does not react to changes in matrix bounds
 /// Updates the visual state of the piece queue. When the queue changes, each piece in the queue has
 /// its texture updated to match its intended state.
-pub(super) fn display_queue(
+pub(crate) fn display_queue(
     queue: Query<(&PieceQueue, &Children), Changed<PieceQueue>>,
     mut sprites: Query<(&Handle<MatrixMaterial>, &QueueSprite)>,
     mut mats: ResMut<Assets<MatrixMaterial>>,

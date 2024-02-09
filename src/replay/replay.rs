@@ -1,17 +1,13 @@
 //! Replay code currently depends on the board being unique in the world.
 
 use crate::animation::{CameraZoom, DEFAULT_CAMERA_ZOOM, REPLAY_CAMERA_ZOOM};
-use crate::board::record::RecordData;
 use crate::progress_bar::{ProgressBar, ProgressBarBundle, ProgressBarMaterial};
+use crate::replay::record::RecordData;
+use crate::replay::record::{discretized_time, Record};
 use bevy::prelude::*;
 use duplicate::duplicate;
 
-use crate::state::MainState;
-
-use super::{
-    record::{discretized_time, Record},
-    update::BoardQuery,
-};
+use crate::board::BoardQuery;
 
 /// Stores information about the state of the replay (i.e. paused or played, frames progressed).
 #[derive(Resource, Default, Debug)]
@@ -41,7 +37,10 @@ pub struct ActiveReplayMeta {
 #[derive(Component)]
 pub struct ReplayBar;
 
-fn setup_progress_bar(mut commands: Commands, mut materials: ResMut<Assets<ProgressBarMaterial>>) {
+pub(crate) fn setup_progress_bar(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ProgressBarMaterial>>,
+) {
     let style = Style {
         position_type: PositionType::Absolute,
         height: Val::Percent(95.0),
@@ -62,11 +61,11 @@ fn setup_progress_bar(mut commands: Commands, mut materials: ResMut<Assets<Progr
         .insert(ReplayBar);
 }
 
-fn remove_progress_bar(mut commands: Commands, bar: Query<Entity, With<ReplayBar>>) {
+pub(crate) fn remove_progress_bar(mut commands: Commands, bar: Query<Entity, With<ReplayBar>>) {
     commands.entity(bar.single()).despawn_recursive();
 }
 
-fn update_progress(
+pub(crate) fn update_progress(
     mut bar: Query<&mut ProgressBar, With<ReplayBar>>,
     info: Res<ReplayInfo>,
     record: Res<Record>,
@@ -108,14 +107,16 @@ pub fn replay(
     let mut board = board.single_mut();
     if let Some(meta) = replay_info.playing {
         if meta.reverse {
-            // Reaching past next_ix to find the current active piece, hold, and queue. This is necessary because these
-            // properties can span multiple frames past when they are applied. For example, when dealing with updates to
-            // the active piece, the piece may stay in the same position for multiple frames while it locks onto the
-            // floor. However, the record is only on the frame when it touches the floor, not when it locks. Thus, when
-            // we rewind, the board will update to show that the piece has not been placed yet, but the active piece
-            // will not become visible until we get to the first frame it touches the floor (this phenomenon actually
-            // applies to the active piece's position in general, but this illustration is much more vivid, because it
-            // will appear that the board doesn't actually have an active piece).
+            // Reaching past next_ix to find the current active piece, hold, and queue. This is
+            // necessary because these properties can span multiple frames past when they are
+            // applied. For example, when dealing with updates to the active piece, the piece may
+            // stay in the same position for multiple frames while it locks onto the floor. However,
+            // the record is only on the frame when it touches the floor, not when it locks. Thus,
+            // when we rewind, the board will update to show that the piece has not been placed yet,
+            // but the active piece will not become visible until we get to the first frame it
+            // touches the floor (this phenomenon actually applies to the active piece's position in
+            // general, but this illustration is much more vivid, because it will appear that the
+            // board doesn't actually have an active piece).
             let search = &record.data[..replay_info.next_ix];
             duplicate! {
                 [
@@ -148,7 +149,7 @@ pub fn replay(
     replay_info.ix = replay_info.next_ix;
 }
 
-fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, time: Res<Time>) {
+pub fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, time: Res<Time>) {
     if let Some(initial) = replay_info.playing {
         let current_time = discretized_time(&time);
         let elapsed_time = current_time - initial.real_frame;
@@ -187,7 +188,11 @@ fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, time:
     }
 }
 
-fn adjust_replay(mut replay_info: ResMut<ReplayInfo>, input: Res<Input<KeyCode>>, time: Res<Time>) {
+pub(crate) fn adjust_replay(
+    mut replay_info: ResMut<ReplayInfo>,
+    input: Res<Input<KeyCode>>,
+    time: Res<Time>,
+) {
     let record_frame = replay_info.frame;
     let real_frame = discretized_time(&time);
 
@@ -216,30 +221,5 @@ fn adjust_replay(mut replay_info: ResMut<ReplayInfo>, input: Res<Input<KeyCode>>
                 reverse: true,
             })
         }
-    }
-}
-
-pub struct ReplayPlugin;
-
-impl Plugin for ReplayPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            replay.run_if(in_state(MainState::PostGame).and_then(resource_changed::<ReplayInfo>())),
-        )
-        .add_systems(
-            PostUpdate,
-            (adjust_replay, advance_frame, update_progress)
-                .chain()
-                .run_if(in_state(MainState::PostGame)),
-        )
-        .add_systems(
-            OnEnter(MainState::PostGame),
-            (initialize_replay, setup_progress_bar),
-        )
-        .add_systems(
-            OnExit(MainState::PostGame),
-            (cleanup_replay, remove_progress_bar),
-        );
     }
 }

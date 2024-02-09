@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::ops::Index;
 
 use bevy::math::IRect;
+use bevy::prelude::Deref;
 use bevy::{
     asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, Handle, LoadContext},
     ecs::system::Resource,
@@ -38,8 +39,7 @@ impl From<Mino> for ShapeParameters {
     }
 }
 
-
-#[derive(serde::Deserialize, Resource, Clone, Debug, Asset, TypePath)]
+#[derive(serde::Deserialize, Resource, Clone, Debug, Asset, TypePath, Deref)]
 pub struct ShapeTable {
     table: HashMap<ShapeParameters, Vec<IVec2>>,
 }
@@ -93,7 +93,10 @@ impl ShapeTable {
             .filter_map(|(p, q)| filter(p).then_some(q))
             .flatten()
             .fold((IVec2::MAX, IVec2::MIN), |(a, b), &c| (a.min(c), b.max(c)));
-        IRect { min, max: max + IVec2::ONE }
+        IRect {
+            min,
+            max: max + IVec2::ONE,
+        }
     }
 }
 
@@ -112,7 +115,6 @@ impl Index<Mino> for ShapeTable {
         &self[ShapeParameters::from(index)]
     }
 }
-
 
 #[derive(Resource, AssetCollection)]
 pub struct DefaultShapeTable {

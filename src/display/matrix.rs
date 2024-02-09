@@ -1,12 +1,12 @@
 use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 use bevy::prelude::*;
 
-use crate::board::{Bounds, Matrix, MatrixAction, CELL_SIZE, MATRIX_DEFAULT_SIZE, MinoKind};
+use crate::board::{Bounds, Matrix, MatrixAction, MinoKind, CELL_SIZE, MATRIX_DEFAULT_SIZE};
 
 #[derive(Component)]
 pub struct MatrixSprite;
 
-pub(super) fn spawn_matrix_sprite(
+pub(crate) fn spawn_matrix_sprite(
     mut commands: Commands,
     boards: Query<Entity, Added<Matrix>>,
     mut mesh_spawner: MatrixMaterialSpawner,
@@ -24,7 +24,7 @@ pub(super) fn spawn_matrix_sprite(
 /// Creates/removes the tiles on the screen given the state of the board at the time. A variant of
 /// each cell exists on the screen, and this system reads the currently active variant of tetromino
 /// at that location and enables the visibility of that sprite accordingly.
-pub(super) fn redraw_board(
+pub(crate) fn redraw_board(
     board: Query<(&Matrix, &Bounds, &Children), Changed<Matrix>>,
     children: Query<&Handle<MatrixMaterial>, With<MatrixSprite>>,
     mut material_server: ResMut<Assets<MatrixMaterial>>,
@@ -45,7 +45,7 @@ pub(super) fn redraw_board(
 }
 
 /// Centers the legal part of the matrix rather than the entire matrix.
-pub(super) fn center_board(
+pub(crate) fn center_board(
     boards: Query<(&Bounds, &Children), Changed<Bounds>>,
     mut sprites: Query<&mut Transform, With<MatrixSprite>>,
 ) {

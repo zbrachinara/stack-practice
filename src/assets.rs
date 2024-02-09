@@ -9,13 +9,13 @@ use bevy_asset_loader::{
     asset_collection::AssetCollection,
     loading_state::{LoadingState, LoadingStateAppExt},
 };
-use strum::IntoEnumIterator;
 
+mod image_tools;
 pub mod matrix_material;
 pub mod tables;
 
-use crate::{board::MinoKind, state::MainState};
 use crate::assets::matrix_material::MatrixMaterial;
+use crate::state::MainState;
 
 use self::tables::{
     kick_table::{DefaultKickTable, KickTable, KickTableLoader},
@@ -59,9 +59,6 @@ impl MinoTextures {
             self.i.clone(),
             self.g.clone(),
         ]
-    }
-    pub fn iter_with_kind(&self) -> impl Iterator<Item = (MinoKind, Handle<Image>)> + '_ {
-        MinoKind::iter().map(|i| (i, i.select(self)))
     }
 }
 

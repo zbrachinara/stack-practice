@@ -12,7 +12,7 @@ use crate::{
 #[derive(Component)]
 pub struct HoldSprite;
 
-pub(super) fn spawn_hold_sprite(
+pub(crate) fn spawn_hold_sprite(
     mut commands: Commands,
     boards: Query<Entity, Added<Hold>>,
     shape_table: QueryShapeTable,
@@ -42,7 +42,7 @@ pub(super) fn spawn_hold_sprite(
 
 /// Displays the held piece. Greys the texture of the associated sprite if it is inactive, or keeps
 /// it at its normal color if it is not. The sprite is hidden if the hold slot is empty.
-pub(super) fn display_held(
+pub(crate) fn display_held(
     hold: Query<(&Hold, &Children), Changed<Hold>>,
     shape_table: QueryShapeTable,
     mut sprites: Query<(&mut Visibility, &Handle<MatrixMaterial>), With<HoldSprite>>,

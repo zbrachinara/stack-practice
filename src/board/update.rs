@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
+use bevy::math::ivec2;
 use bevy::prelude::*;
-use bevy::{ecs::query::WorldQuery, math::ivec2};
 use tap::Tap;
 
 use crate::assets::tables::{
@@ -9,14 +9,12 @@ use crate::assets::tables::{
     shape_table::ShapeTable,
     QueryKickTable, QueryShapeTable,
 };
-use crate::board::controller::RotateCommand;
-use crate::board::record::RecordData;
+use crate::controller::{Controller, RotateCommand};
 use crate::state::MainState;
 
-use super::record::RecordItem;
 use super::{
-    controller::Controller, queue::PieceQueue, Active, Bounds, DropClock, Hold, Matrix,
-    MatrixAction, MatrixUpdate, Mino, MinoKind, RotationState, Settings,
+    BoardQuery, BoardQueryItem, Hold, Matrix, MatrixAction, MatrixUpdate, Mino, MinoKind,
+    RotationState,
 };
 
 /// Checks if the matrix can accommodate the given piece.
@@ -200,52 +198,6 @@ impl<'world> BoardQueryItem<'world> {
 
         *self.queue = default(); // TODO empty the queue instead of filling it with arbitrary data
     }
-
-    pub fn apply_record(&mut self, record: &RecordItem) {
-        match &record.data {
-            RecordData::ActiveChange { new_position } => self.active.0 = *new_position,
-            RecordData::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
-            RecordData::Hold { replace_with } => *(self.hold) = *replace_with,
-            RecordData::MatrixChange { update } => {
-                self.matrix.updates.push(*update);
-
-                self.matrix.data[update.loc.y as usize][update.loc.x as usize] =
-                    if update.action == MatrixAction::Insert {
-                        update.kind
-                    } else {
-                        MinoKind::E
-                    };
-            }
-        }
-    }
-
-    /// This function undoes a record which has been previously been applied through [`Self::apply_record`]. This can
-    /// be used, for example, to rewind through a record.
-    pub fn undo_record(&mut self, record: &RecordItem) {
-        match &record.data {
-            RecordData::MatrixChange { update } => {
-                let update = update.invert();
-                self.apply_record(&RecordItem {
-                    data: RecordData::MatrixChange { update },
-                    time: record.time,
-                }) // TODO this should be cleaner (no need to duplicate time, etc)
-            }
-            _ => self.apply_record(record),
-        }
-    }
-}
-
-#[derive(WorldQuery)]
-#[world_query(mutable)]
-pub(super) struct BoardQuery {
-    matrix: &'static mut Matrix,
-    active: &'static mut Active,
-    hold: &'static mut Hold,
-    queue: &'static mut PieceQueue,
-    drop_clock: &'static mut DropClock,
-    bounds: &'static Bounds,
-    settings: &'static Settings,
-    id: Entity,
 }
 
 #[derive(Event, Clone, Copy, Debug)]

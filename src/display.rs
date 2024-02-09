@@ -31,9 +31,9 @@ pub enum DisplayEntitySet {
     Update,
 }
 
-pub struct BoardDisplayPlugin;
+pub struct DisplayPlugin;
 
-impl Plugin for BoardDisplayPlugin {
+impl Plugin for DisplayPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugins(Material2dPlugin::<DropShadowMaterial>::default())
             .add_systems(

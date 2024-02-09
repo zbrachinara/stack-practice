@@ -3,7 +3,7 @@ use std::{collections::VecDeque, iter::repeat_with};
 use bevy::{ecs::component::Component, utils::default};
 use rand::{seq::SliceRandom, thread_rng, SeedableRng};
 use rand_pcg::Pcg32;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use tap::Tap;
 
 use super::MinoKind;

@@ -10,7 +10,7 @@ use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 #[derive(Component)]
 pub struct ActiveSprite;
 
-pub(super) fn spawn_active_sprite(
+pub(crate) fn spawn_active_sprite(
     mut commands: Commands,
     boards: Query<Entity, Added<Active>>,
     mut mat_spawner: MatrixMaterialSpawner,
@@ -30,7 +30,7 @@ pub(super) fn spawn_active_sprite(
 /// initialized in the same system that spawns the board. If the active piece becomes `None`, then
 /// the sprite representing it is hidden. If it is modified in any other way, the sprite's position
 /// and kind will be updated to match.
-pub(super) fn display_active(
+pub(crate) fn display_active(
     active: Query<(&Active, &Bounds, &Children), Changed<Active>>,
     mut sprites: Query<
         (&mut Visibility, &mut Transform, &Handle<MatrixMaterial>),

@@ -23,7 +23,7 @@ impl Material2d for DropShadowMaterial {
     }
 }
 
-pub(super) fn spawn_drop_shadow(
+pub(crate) fn spawn_drop_shadow(
     mut commands: Commands,
     boards: Query<Entity, Added<Matrix>>,
     mut materials: ResMut<Assets<DropShadowMaterial>>,
@@ -70,7 +70,7 @@ pub(super) fn spawn_drop_shadow(
     }
 }
 
-pub(super) fn update_drop_shadow(
+pub(crate) fn update_drop_shadow(
     active: Query<(&Active, &Children), Changed<Active>>,
     mat: Query<&Handle<DropShadowMaterial>>,
     mut images: ResMut<Assets<Image>>,

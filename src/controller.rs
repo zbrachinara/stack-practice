@@ -1,11 +1,6 @@
 use crate::board::Settings;
 use crate::screens::GlobalSettings;
-use bevy::prelude::{DetectChanges, Local};
-use bevy::{
-    ecs::system::{Res, ResMut, Resource},
-    input::{keyboard::KeyCode, Input},
-    time::Time,
-};
+use bevy::prelude::*;
 
 #[rustfmt::skip]
 #[derive(Copy, Clone)]
@@ -15,8 +10,6 @@ pub enum RotateCommand {
 
 #[derive(Resource, Default)]
 pub struct Controller {
-    // pub shift_left: u32,
-    // pub shift_right: u32,
     pub shift: i32,
     repeater_left: Repeatable,
     repeater_right: Repeatable,
@@ -143,4 +136,14 @@ pub fn reset_controller(mut controller: ResMut<Controller>) {
     std::mem::take(&mut *controller);
     controller.repeater_right = repeater_right;
     controller.repeater_left = repeater_left;
+}
+
+pub struct ControllerPlugin;
+
+impl Plugin for ControllerPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<Controller>()
+            .add_systems(Update, process_input)
+            .add_systems(PostUpdate, reset_controller);
+    }
 }

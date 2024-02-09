@@ -1,35 +1,27 @@
-#![allow(clippy::type_complexity)]
-
+use bevy::ecs::query::WorldQuery;
 use bevy::prelude::*;
 use bevy::{
-    asset::AssetPath,
     ecs::system::SystemId,
     math::{ivec2, IVec2},
 };
 use smart_default::SmartDefault;
 use tap::Tap;
 
-mod controller;
-mod display;
-mod queue;
-mod record;
-mod replay;
+pub mod queue;
 mod update;
 
-use crate::{assets::MinoTextures, screens::GlobalSettings, state::MainState};
+use crate::controller::process_input;
+use crate::replay::record::{discretized_time, FirstFrame};
+use crate::{screens::GlobalSettings, state::MainState};
 
 use self::{
-    controller::{process_input, reset_controller, Controller},
-    display::BoardDisplayPlugin,
     queue::PieceQueue,
-    record::{discretized_time, record, FirstFrame, Record},
-    replay::ReplayPlugin,
     update::{spawn_piece, update_board, PieceSpawnEvent},
 };
 
 #[derive(
-    Debug, PartialEq, Eq, Hash, Clone, Copy,
-    serde::Serialize, serde::Deserialize, strum::EnumIter
+Debug, PartialEq, Eq, Hash, Clone, Copy,
+serde::Serialize, serde::Deserialize, strum::EnumIter
 )]
 #[repr(u32)]
 #[rustfmt::skip]
@@ -38,35 +30,6 @@ pub enum MinoKind {
 }
 
 impl MinoKind {
-    pub fn select(&self, textures: &MinoTextures) -> Handle<Image> {
-        match self {
-            MinoKind::T => &textures.t,
-            MinoKind::O => &textures.o,
-            MinoKind::L => &textures.l,
-            MinoKind::J => &textures.j,
-            MinoKind::S => &textures.s,
-            MinoKind::Z => &textures.z,
-            MinoKind::I => &textures.i,
-            MinoKind::G => &textures.g,
-            MinoKind::E => &textures.e,
-        }
-        .clone()
-    }
-
-    pub fn path_of(&self) -> AssetPath {
-        match self {
-            MinoKind::T => "minos/T.png".into(),
-            MinoKind::O => "minos/O.png".into(),
-            MinoKind::L => "minos/L.png".into(),
-            MinoKind::J => "minos/J.png".into(),
-            MinoKind::S => "minos/S.png".into(),
-            MinoKind::Z => "minos/Z.png".into(),
-            MinoKind::I => "minos/I.png".into(),
-            MinoKind::G => "minos/G.png".into(),
-            MinoKind::E => "minos/E.png".into(),
-        }
-    }
-
     pub fn color(&self) -> Color {
         match self {
             MinoKind::T => Color::PURPLE,
@@ -89,7 +52,7 @@ pub enum RotationState {
 }
 
 impl RotationState {
-    fn rotate_180(self) -> Self {
+    pub fn rotate_180(self) -> Self {
         use RotationState::*;
         match self {
             Up => Down,
@@ -99,7 +62,7 @@ impl RotationState {
         }
     }
 
-    fn rotate_left(self) -> Self {
+    pub fn rotate_left(self) -> Self {
         use RotationState::*;
         match self {
             Up => Left,
@@ -109,7 +72,7 @@ impl RotationState {
         }
     }
 
-    fn rotate_right(self) -> Self {
+    pub fn rotate_right(self) -> Self {
         use RotationState::*;
         match self {
             Up => Right,
@@ -128,7 +91,7 @@ pub struct Mino {
 }
 
 #[derive(Component, Default, Clone, Copy, Debug)]
-enum Hold {
+pub enum Hold {
     #[default]
     Empty,
     Ready(MinoKind),
@@ -136,32 +99,32 @@ enum Hold {
 }
 
 impl Hold {
-    fn activate(&mut self) {
+    pub fn activate(&mut self) {
         if let Self::Inactive(p) = self {
             *self = Self::Ready(*p);
         }
     }
 }
 
-const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
-const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
+pub const MATRIX_DEFAULT_SIZE: IVec2 = ivec2(10, 40);
+pub const MATRIX_DEFAULT_LEGAL_BOUNDS: IVec2 = ivec2(10, 20);
 pub const CELL_SIZE: u32 = 32;
 
 #[derive(Component, SmartDefault)]
-struct Bounds {
+pub struct Bounds {
     #[default(MATRIX_DEFAULT_SIZE)]
-    true_bounds: IVec2,
+    pub true_bounds: IVec2,
     #[default(MATRIX_DEFAULT_LEGAL_BOUNDS)]
-    legal_bounds: IVec2,
+    pub legal_bounds: IVec2,
 }
 
 #[derive(Component, Default)]
-struct Active(Option<Mino>);
+pub struct Active(pub Option<Mino>);
 
 #[derive(Component)]
-struct Matrix {
-    data: Vec<Vec<MinoKind>>,
-    updates: Vec<MatrixUpdate>,
+pub struct Matrix {
+    pub data: Vec<Vec<MinoKind>>,
+    pub updates: Vec<MatrixUpdate>,
 }
 
 impl Default for Matrix {
@@ -176,7 +139,7 @@ impl Default for Matrix {
 }
 
 #[derive(Component, Default)]
-struct DropClock {
+pub struct DropClock {
     fall: f32,
     lock: f32,
 }
@@ -204,22 +167,22 @@ impl Matrix {
     }
 }
 
-#[rustfmt::ignore]
+#[rustfmt::skip]
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum MatrixAction {
+pub enum MatrixAction {
     Insert,
     Erase,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct MatrixUpdate {
-    loc: IVec2,
-    kind: MinoKind,
-    action: MatrixAction,
+pub struct MatrixUpdate {
+    pub loc: IVec2,
+    pub kind: MinoKind,
+    pub action: MatrixAction,
 }
 
 impl MatrixUpdate {
-    fn invert(self) -> Self {
+    pub fn invert(self) -> Self {
         let Self { loc, kind, action } = self;
         let action = match action {
             MatrixAction::Insert => MatrixAction::Erase,
@@ -272,7 +235,7 @@ fn begin_game(
 
     commands
         .spawn(Board::default().tap_mut(|b| b.settings = Settings::try_from(&*settings).unwrap()));
-    commands.insert_resource(FirstFrame(discretized_time(&time)));
+    commands.insert_resource(FirstFrame(discretized_time(&time))); // TODO move to replay module
     commands.run_system(**start_game);
 }
 
@@ -308,28 +271,29 @@ fn start_game(
 
 pub struct BoardPlugin;
 
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct BoardQuery {
+    pub matrix: &'static mut Matrix,
+    pub active: &'static mut Active,
+    pub hold: &'static mut Hold,
+    pub queue: &'static mut PieceQueue,
+    pub drop_clock: &'static mut DropClock,
+    pub bounds: &'static Bounds,
+    pub settings: &'static Settings,
+    pub id: Entity,
+}
+
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Controller>()
-            .init_resource::<Record>()
-            .add_plugins((BoardDisplayPlugin, ReplayPlugin))
-            .add_event::<PieceSpawnEvent>()
+        app.add_event::<PieceSpawnEvent>()
             .add_systems(Startup, register_start_game)
             .add_systems(OnEnter(MainState::Playing), begin_game)
             .add_systems(
                 Update,
                 (
-                    process_input,
                     spawn_piece.run_if(on_event::<PieceSpawnEvent>()),
                     update_board.after(process_input),
-                )
-                    .run_if(in_state(MainState::Playing)),
-            )
-            .add_systems(
-                PostUpdate,
-                (
-                    reset_controller,
-                    record.run_if(resource_exists::<FirstFrame>()),
                 )
                     .run_if(in_state(MainState::Playing)),
             )

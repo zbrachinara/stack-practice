@@ -4,11 +4,13 @@ use bevy::prelude::PluginGroup;
 pub mod animation;
 pub mod assets;
 pub mod board;
+pub mod display;
+pub mod replay;
 pub mod screens;
 pub mod state;
-mod progress_bar;
 
-mod image_tools;
+mod controller;
+mod progress_bar;
 
 pub struct StackPracticePlugins;
 
@@ -17,7 +19,10 @@ impl PluginGroup for StackPracticePlugins {
         PluginGroupBuilder::start::<Self>()
             .add(progress_bar::ProgressBarPlugin)
             .add(assets::StackingAssetsPlugin)
+            .add(controller::ControllerPlugin)
             .add(board::BoardPlugin)
+            .add(display::DisplayPlugin)
+            .add(replay::ReplayPlugin)
             .add(state::StatePlugin)
             .add(screens::ScreensPlugin)
             .add(animation::AnimationPlugin)

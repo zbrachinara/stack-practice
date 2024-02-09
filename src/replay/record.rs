@@ -7,7 +7,10 @@ use bevy::{
     time::Time,
 };
 
-use super::{queue::PieceQueue, Active, Hold, Matrix, MatrixUpdate, Mino};
+use crate::board::{
+    queue::PieceQueue, Active, BoardQueryItem, Hold, Matrix, MatrixAction, MatrixUpdate, Mino,
+    MinoKind,
+};
 
 #[derive(Resource, Default, Debug)]
 pub struct Record {
@@ -36,7 +39,7 @@ pub fn discretized_time(time: &Time) -> u64 {
     (time.elapsed().as_millis() * 60 / 1000) as u64
 }
 
-pub(super) fn record(
+pub(crate) fn record(
     state: Query<(Ref<Active>, Ref<PieceQueue>, Ref<Hold>, Ref<Matrix>)>,
     mut record: ResMut<Record>,
     time: Res<Time>,
@@ -79,6 +82,41 @@ pub(super) fn record(
                     time: dt,
                 })
             }
+        }
+    }
+}
+
+impl<'world> BoardQueryItem<'world> {
+    pub fn apply_record(&mut self, record: &RecordItem) {
+        match &record.data {
+            RecordData::ActiveChange { new_position } => self.active.0 = *new_position,
+            RecordData::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
+            RecordData::Hold { replace_with } => *(self.hold) = *replace_with,
+            RecordData::MatrixChange { update } => {
+                self.matrix.updates.push(*update);
+
+                self.matrix.data[update.loc.y as usize][update.loc.x as usize] =
+                    if update.action == MatrixAction::Insert {
+                        update.kind
+                    } else {
+                        MinoKind::E
+                    };
+            }
+        }
+    }
+
+    /// This function undoes a record which has been previously been applied through [`Self::apply_record`]. This can
+    /// be used, for example, to rewind through a record.
+    pub fn undo_record(&mut self, record: &RecordItem) {
+        match &record.data {
+            RecordData::MatrixChange { update } => {
+                let update = update.invert();
+                self.apply_record(&RecordItem {
+                    data: RecordData::MatrixChange { update },
+                    time: record.time,
+                }) // TODO this should be cleaner (no need to duplicate time, etc)
+            }
+            _ => self.apply_record(record),
         }
     }
 }

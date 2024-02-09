@@ -5,10 +5,10 @@ use bevy::{
     sprite::{ColorMaterial, MaterialMesh2dBundle},
 };
 use itertools::{iproduct, Itertools};
-use stack_practice::assets::tables::QueryShapeTable;
 use stack_practice::assets::matrix_material::MatrixMaterialSpawner;
-use stack_practice::{assets::StackingAssetsPlugin, board::CELL_SIZE, state::StatePlugin};
+use stack_practice::assets::tables::QueryShapeTable;
 use stack_practice::state::MainState;
+use stack_practice::{assets::StackingAssetsPlugin, board::CELL_SIZE, state::StatePlugin};
 
 fn spawn_grid(
     mut commands: Commands,
@@ -34,7 +34,6 @@ fn spawn_grid(
 }
 
 fn render_all_pieces(
-    // mut commands: Commands,
     mut camera: Query<&mut OrthographicProjection>,
     shapes: QueryShapeTable,
     mut finished: Local<bool>,
@@ -44,7 +43,6 @@ fn render_all_pieces(
         camera.single_mut().scale = 2.0;
 
         shapes
-            .table
             .iter()
             .sorted_by_key(|(p, _)| p.rotation)
             .map(|(p, shape)| (p.kind, shape))

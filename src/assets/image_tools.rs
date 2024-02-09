@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use bevy::math::uvec2;
+use bevy::prelude::*;
 use image::{GenericImage, ImageBuffer};
 use tap::Tap;
 
