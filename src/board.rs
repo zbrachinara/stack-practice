@@ -177,18 +177,14 @@ pub enum MatrixAction {
 #[derive(Debug, Clone, Copy)]
 pub struct MatrixUpdate {
     pub loc: IVec2,
-    pub kind: MinoKind,
-    pub action: MatrixAction,
+    pub old: MinoKind,
+    pub new: MinoKind,
 }
 
 impl MatrixUpdate {
-    pub fn invert(self) -> Self {
-        let Self { loc, kind, action } = self;
-        let action = match action {
-            MatrixAction::Insert => MatrixAction::Erase,
-            MatrixAction::Erase => MatrixAction::Insert,
-        };
-        Self { loc, kind, action }
+    pub fn invert(mut self) -> Self {
+        std::mem::swap(&mut self.old, &mut self.new);
+        self
     }
 }
 

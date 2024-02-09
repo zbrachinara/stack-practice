@@ -55,18 +55,7 @@ fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
         .zip(matrix.data.iter().flat_map(|i| i.iter().copied()))
         .zip((0..).map(|ix| ivec2(ix % row_size as i32, ix / row_size as i32)))
         .filter(|((old, new), _)| old != new)
-        .map(|((_, new), loc)| {
-            let action = if new == MinoKind::E {
-                MatrixAction::Erase
-            } else {
-                MatrixAction::Insert
-            };
-            MatrixUpdate {
-                loc,
-                action,
-                kind: new,
-            }
-        });
+        .map(|((old, new), loc)| MatrixUpdate { loc, old, new });
     matrix.updates.extend(new_updates);
 }
 
@@ -187,8 +176,8 @@ impl<'world> BoardQueryItem<'world> {
                 if *cell != MinoKind::E {
                     updates.push(MatrixUpdate {
                         loc: p,
-                        kind: *cell,
-                        action: MatrixAction::Erase,
+                        old: *cell,
+                        new: MinoKind::E,
                     });
                     *cell = MinoKind::E;
                 }

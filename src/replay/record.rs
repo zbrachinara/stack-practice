@@ -94,13 +94,7 @@ impl<'world> BoardQueryItem<'world> {
             RecordData::Hold { replace_with } => *(self.hold) = *replace_with,
             RecordData::MatrixChange { update } => {
                 self.matrix.updates.push(*update);
-
-                self.matrix.data[update.loc.y as usize][update.loc.x as usize] =
-                    if update.action == MatrixAction::Insert {
-                        update.kind
-                    } else {
-                        MinoKind::E
-                    };
+                self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.new;
             }
         }
     }

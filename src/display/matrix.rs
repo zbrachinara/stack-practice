@@ -35,11 +35,7 @@ pub(crate) fn redraw_board(
 
         for up in board.updates.iter() {
             let ix = up.loc.y * bounds.true_bounds.x + up.loc.x;
-            material.data[ix as usize] = if up.action == MatrixAction::Erase {
-                MinoKind::E as u32
-            } else {
-                up.kind as u32
-            };
+            material.data[ix as usize] = up.new as u32;
         }
     }
 }

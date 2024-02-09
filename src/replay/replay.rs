@@ -80,6 +80,8 @@ pub fn initialize_replay(
 ) {
     **zoom = REPLAY_CAMERA_ZOOM;
 
+    println!("{:?}", *record);
+
     let last_frame = record.data.last().unwrap().time;
     let last_ix = record.data.len();
 
