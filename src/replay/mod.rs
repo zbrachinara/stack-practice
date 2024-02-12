@@ -1,4 +1,4 @@
-use crate::replay::record::{record, FirstFrame, Record};
+use crate::replay::record::{record, CompleteRecord, FirstFrame, PartialRecord};
 use crate::replay::replay::{replay, ReplayInfo};
 use crate::state::MainState;
 use bevy::prelude::*;
@@ -10,7 +10,8 @@ pub struct ReplayPlugin;
 
 impl Plugin for ReplayPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Record>()
+        app.init_resource::<CompleteRecord>()
+            .init_resource::<PartialRecord>()
             .add_systems(
                 Update,
                 replay.run_if(
@@ -32,6 +33,7 @@ impl Plugin for ReplayPlugin {
                     .chain()
                     .run_if(in_state(MainState::PostGame)),
             )
+            .add_systems(OnExit(MainState::Playing), record::finalize_record)
             .add_systems(
                 OnEnter(MainState::PostGame),
                 (replay::initialize_replay, replay::setup_progress_bar),

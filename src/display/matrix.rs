@@ -1,7 +1,7 @@
 use crate::assets::matrix_material::{MatrixMaterial, MatrixMaterialSpawner};
 use bevy::prelude::*;
 
-use crate::board::{Bounds, Matrix, MatrixAction, MinoKind, CELL_SIZE, MATRIX_DEFAULT_SIZE};
+use crate::board::{Bounds, Matrix, CELL_SIZE, MATRIX_DEFAULT_SIZE};
 
 #[derive(Component)]
 pub struct MatrixSprite;

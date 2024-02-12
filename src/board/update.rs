@@ -13,8 +13,7 @@ use crate::controller::{Controller, RotateCommand};
 use crate::state::MainState;
 
 use super::{
-    BoardQuery, BoardQueryItem, Hold, Matrix, MatrixAction, MatrixUpdate, Mino, MinoKind,
-    RotationState,
+    BoardQuery, BoardQueryItem, Hold, Matrix, MatrixUpdate, Mino, MinoKind, RotationState,
 };
 
 /// Checks if the matrix can accommodate the given piece.

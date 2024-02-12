@@ -2,8 +2,8 @@
 
 use crate::animation::{CameraZoom, DEFAULT_CAMERA_ZOOM, REPLAY_CAMERA_ZOOM};
 use crate::progress_bar::{ProgressBar, ProgressBarBundle, ProgressBarMaterial};
-use crate::replay::record::RecordData;
-use crate::replay::record::{discretized_time, Record};
+use crate::replay::record::{discretized_time, PartialRecord};
+use crate::replay::record::{CompleteRecord, RecordData};
 use bevy::prelude::*;
 use duplicate::duplicate;
 
@@ -68,27 +68,24 @@ pub(crate) fn remove_progress_bar(mut commands: Commands, bar: Query<Entity, Wit
 pub(crate) fn update_progress(
     mut bar: Query<&mut ProgressBar, With<ReplayBar>>,
     info: Res<ReplayInfo>,
-    record: Res<Record>,
+    record: Res<CompleteRecord>,
 ) {
-    bar.single_mut().progress = info.frame as f32 / record.data.last().unwrap().time as f32;
+    bar.single_mut().progress = info.frame as f32 / record.last_frame() as f32;
 }
 
 pub fn initialize_replay(
     mut commands: Commands,
-    record: Res<Record>,
+    record: Res<CompleteRecord>,
     mut zoom: ResMut<CameraZoom>,
 ) {
     **zoom = REPLAY_CAMERA_ZOOM;
 
     println!("{:?}", *record);
 
-    let last_frame = record.data.last().unwrap().time;
-    let last_ix = record.data.len();
-
     let replay_info = ReplayInfo {
-        frame: last_frame,
-        ix: last_ix,
-        next_ix: last_ix,
+        frame: record.last_frame(),
+        ix: record.len(),
+        next_ix: record.len(),
         playing: None,
     };
     commands.insert_resource(replay_info);
@@ -98,11 +95,12 @@ pub fn cleanup_replay(mut commands: Commands, mut zoom: ResMut<CameraZoom>) {
     **zoom = DEFAULT_CAMERA_ZOOM;
 
     commands.remove_resource::<ReplayInfo>();
-    commands.init_resource::<Record>()
+    commands.init_resource::<PartialRecord>();
+    commands.init_resource::<CompleteRecord>();
 }
 
 pub fn replay(
-    record: Res<Record>,
+    record: Res<CompleteRecord>,
     mut replay_info: ResMut<ReplayInfo>,
     mut board: Query<BoardQuery>,
 ) {
@@ -119,7 +117,7 @@ pub fn replay(
             // touches the floor (this phenomenon actually applies to the active piece's position in
             // general, but this illustration is much more vivid, because it will appear that the
             // board doesn't actually have an active piece).
-            let search = &record.data[..replay_info.next_ix];
+            let search = record.get(0..replay_info.next_ix);
             duplicate! {
                 [
                     Match; [ActiveChange]; [Hold]; [QueueChange];
@@ -135,7 +133,8 @@ pub fn replay(
             }
 
             // matrix changes can be applied immediately
-            for item in record.data[replay_info.next_ix..replay_info.ix]
+            for item in record
+                .get(replay_info.next_ix..replay_info.ix)
                 .iter()
                 .filter(|i| matches!(i.data, RecordData::MatrixChange { .. }))
                 .rev()
@@ -143,7 +142,7 @@ pub fn replay(
                 board.undo_record(item);
             }
         } else {
-            for item in &record.data[replay_info.ix..replay_info.next_ix] {
+            for item in record.get(replay_info.ix..replay_info.next_ix).iter() {
                 board.apply_record(item);
             }
         }
@@ -151,7 +150,11 @@ pub fn replay(
     replay_info.ix = replay_info.next_ix;
 }
 
-pub fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, time: Res<Time>) {
+pub fn advance_frame(
+    mut replay_info: ResMut<ReplayInfo>,
+    record: Res<CompleteRecord>,
+    time: Res<Time>,
+) {
     if let Some(initial) = replay_info.playing {
         let current_time = discretized_time(&time);
         let elapsed_time = current_time - initial.real_frame;
@@ -166,23 +169,23 @@ pub fn advance_frame(mut replay_info: ResMut<ReplayInfo>, record: Res<Record>, t
             replay_info.frame = new_record_frame;
 
             replay_info.next_ix = if initial.reverse {
-                record.data[..=std::cmp::min(replay_info.ix, record.data.len() - 1)]
+                record.get(0..std::cmp::min(replay_info.ix+1, record.len()))
                     .iter()
                     .rev()
                     .position(|item| item.time < new_record_frame)
                     .map(|ix| replay_info.ix - ix + 1)
                     .unwrap_or(0)
             } else {
-                record.data[replay_info.ix..]
+                record.get(replay_info.ix..record.len())
                     .iter()
                     .position(|item| item.time > new_record_frame)
                     .map(|ix| replay_info.ix + ix)
-                    .unwrap_or(record.data.len())
+                    .unwrap_or(record.len())
             };
         }
 
         // pause replay after reaching the end of the record
-        if (replay_info.ix == record.data.len() && !initial.reverse)
+        if (replay_info.ix == record.len() && !initial.reverse)
             || (replay_info.ix == 0 && initial.reverse)
         {
             replay_info.playing = None;
