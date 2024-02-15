@@ -9,7 +9,7 @@ use duplicate::duplicate;
 use itertools::Itertools;
 
 use crate::board::BoardQuery;
-use crate::controller::{Controller, FreezeController};
+use crate::controller::Controller;
 use crate::state::MainState;
 
 /// Stores information about the state of the replay (i.e. paused or played, frames progressed).
@@ -84,7 +84,10 @@ pub fn initialize_replay(
     **zoom = REPLAY_CAMERA_ZOOM;
 
     println!("{:?}", record.separations);
-    println!("{:?}", record.segments.iter().map(|p| p.len()).collect_vec());
+    println!(
+        "{:?}",
+        record.segments.iter().map(|p| p.len()).collect_vec()
+    );
 
     let replay_info = ReplayInfo {
         frame: record.last_frame(),
@@ -238,7 +241,6 @@ pub(crate) fn adjust_replay(
 // is pressed, we return to the ready state.
 pub(crate) fn exit_replay(
     mut next_state: ResMut<NextState<MainState>>,
-    mut freeze_controller: EventWriter<FreezeController>,
     controller: Res<Controller>,
     keys: Res<Input<KeyCode>>,
 ) {
@@ -249,7 +251,7 @@ pub(crate) fn exit_replay(
     if controller.any_activation() && !controller.hard_drop {
         // TODO don't advance if we are at the end of the record
         next_state.0 = Some(MainState::Playing);
-        freeze_controller.send(default()); // TODO fix controller freezing
+        // TODO freeze controller state until after first frame has run
     } else if keys.just_pressed(KeyCode::Grave) {
         next_state.0 = Some(MainState::Ready);
     }
