@@ -5,7 +5,9 @@ use bevy::prelude::*;
 #[rustfmt::skip]
 #[derive(Copy, Clone)]
 pub enum RotateCommand {
-    Left, Right, R180,
+    Left,
+    Right,
+    R180,
 }
 
 #[derive(Resource, Default)]
@@ -24,6 +26,20 @@ pub struct Controller {
     pub rotation: Option<RotateCommand>,
 
     pub hold: bool,
+}
+
+impl Controller {
+    pub(crate) fn any_activation(&self) -> bool {
+        [
+            self.shift != 0,
+            self.hard_drop,
+            self.soft_drop,
+            self.rotation.is_some(),
+            self.hold,
+        ]
+        .into_iter()
+        .any(std::convert::identity)
+    }
 }
 
 #[derive(Clone, Copy, Default)]
@@ -130,12 +146,39 @@ pub fn process_input(
     }
 }
 
-pub fn reset_controller(mut controller: ResMut<Controller>) {
-    let repeater_left = controller.repeater_left;
-    let repeater_right = controller.repeater_right;
-    std::mem::take(&mut *controller);
-    controller.repeater_right = repeater_right;
-    controller.repeater_left = repeater_left;
+/// When [`reset_controller`] receives any instances of this event during a frame, it will not reset
+/// the controller for that frame.
+#[derive(Event, Default)]
+pub(crate) struct FreezeController;
+
+#[derive(Event, Default)]
+pub(crate) struct UnfreezeController;
+
+pub fn reset_controller(
+    mut controller: ResMut<Controller>,
+    mut freeze_events: EventReader<FreezeController>,
+    mut unfreeze_events: EventReader<UnfreezeController>,
+    mut frozen: Local<bool>,
+) {
+    let freeze = !freeze_events.is_empty();
+    let unfreeze = !freeze_events.is_empty();
+    freeze_events.clear();
+    unfreeze_events.clear();
+
+    if freeze && unfreeze {
+    } else if freeze {
+        *frozen = true;
+    } else if unfreeze {
+        *frozen = false;
+    }
+
+    if !*frozen {
+        let repeater_left = controller.repeater_left;
+        let repeater_right = controller.repeater_right;
+        std::mem::take(&mut *controller);
+        controller.repeater_right = repeater_right;
+        controller.repeater_left = repeater_left;
+    }
 }
 
 pub struct ControllerPlugin;
@@ -143,6 +186,8 @@ pub struct ControllerPlugin;
 impl Plugin for ControllerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Controller>()
+            .add_event::<FreezeController>()
+            .add_event::<UnfreezeController>()
             .add_systems(Update, process_input)
             .add_systems(PostUpdate, reset_controller);
     }

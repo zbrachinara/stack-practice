@@ -19,7 +19,7 @@ impl Plugin for ScreensPlugin {
             .add_systems(
                 Update,
                 start_playing
-                    .run_if(in_state(MainState::Ready).or_else(in_state(MainState::PostGame)))
+                    .run_if(in_state(MainState::Ready))
                     .after(apply_settings),
             )
             .add_systems(OnExit(MainState::Loading), setup_scene);

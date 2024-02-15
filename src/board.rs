@@ -1,17 +1,12 @@
 use bevy::ecs::query::WorldQuery;
+use bevy::math::{ivec2, IVec2};
 use bevy::prelude::*;
-use bevy::{
-    ecs::system::SystemId,
-    math::{ivec2, IVec2},
-};
 use smart_default::SmartDefault;
-use tap::Tap;
 
 pub mod queue;
 mod update;
 
 use crate::controller::process_input;
-use crate::replay::record::{discretized_time, FirstFrame};
 use crate::{screens::GlobalSettings, state::MainState};
 
 use self::{
@@ -218,35 +213,24 @@ pub struct Board {
     settings: Settings,
 }
 
-fn begin_game(
+fn respawn_board(
     mut commands: Commands,
     old_boards: Query<Entity, With<Matrix>>,
-    start_game: Res<StartGame>,
-    time: Res<Time>,
     settings: Res<GlobalSettings>,
 ) {
     for e in old_boards.iter() {
         commands.entity(e).despawn_recursive();
     }
-
-    commands
-        .spawn(Board::default().tap_mut(|b| b.settings = Settings::try_from(&*settings).unwrap()));
-    commands.insert_resource(FirstFrame(discretized_time(&time))); // TODO move to replay module
-    commands.run_system(**start_game);
+    commands.spawn(Board {
+        settings: Settings::try_from(&*settings).unwrap(),
+        ..default()
+    });
 }
 
 fn clear_update_queue(mut boards: Query<&mut Matrix>) {
     for mut board in boards.iter_mut() {
         board.updates.clear();
     }
-}
-
-#[derive(Resource, Deref)]
-struct StartGame(SystemId);
-
-fn register_start_game(w: &mut World) {
-    let id = w.register_system(start_game);
-    w.insert_resource(StartGame(id))
 }
 
 fn start_game(
@@ -283,8 +267,15 @@ pub struct BoardQuery {
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PieceSpawnEvent>()
-            .add_systems(Startup, register_start_game)
-            .add_systems(OnEnter(MainState::Playing), begin_game)
+            // .add_systems(Startup, register_start_game)
+            .add_systems(OnEnter(MainState::Ready), respawn_board)
+            .add_systems(
+                OnTransition {
+                    from: MainState::Ready,
+                    to: MainState::Playing,
+                },
+                start_game,
+            )
             .add_systems(
                 Update,
                 (

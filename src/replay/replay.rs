@@ -2,18 +2,21 @@
 
 use crate::animation::{CameraZoom, DEFAULT_CAMERA_ZOOM, REPLAY_CAMERA_ZOOM};
 use crate::progress_bar::{ProgressBar, ProgressBarBundle, ProgressBarMaterial};
-use crate::replay::record::{discretized_time, PartialRecord};
+use crate::replay::record::discretized_time;
 use crate::replay::record::{CompleteRecord, RecordData};
 use bevy::prelude::*;
 use duplicate::duplicate;
+use itertools::Itertools;
 
 use crate::board::BoardQuery;
+use crate::controller::{Controller, FreezeController};
+use crate::state::MainState;
 
 /// Stores information about the state of the replay (i.e. paused or played, frames progressed).
 #[derive(Resource, Default, Debug)]
 pub struct ReplayInfo {
     /// The current frame the replay occupies.
-    frame: u64,
+    pub frame: u64,
     /// Index of the item after the most recently played item in the record. If the replay is being reversed, this is
     /// the index of the most recently undone item in the record (no matter the current direction of time, these are the
     /// same thing).
@@ -80,7 +83,8 @@ pub fn initialize_replay(
 ) {
     **zoom = REPLAY_CAMERA_ZOOM;
 
-    println!("{:?}", *record);
+    println!("{:?}", record.separations);
+    println!("{:?}", record.segments.iter().map(|p| p.len()).collect_vec());
 
     let replay_info = ReplayInfo {
         frame: record.last_frame(),
@@ -88,15 +92,13 @@ pub fn initialize_replay(
         next_ix: record.len(),
         playing: None,
     };
+
+    println!("{replay_info:?}");
     commands.insert_resource(replay_info);
 }
 
-pub fn cleanup_replay(mut commands: Commands, mut zoom: ResMut<CameraZoom>) {
+pub fn cleanup_replay(mut zoom: ResMut<CameraZoom>) {
     **zoom = DEFAULT_CAMERA_ZOOM;
-
-    commands.remove_resource::<ReplayInfo>();
-    commands.init_resource::<PartialRecord>();
-    commands.init_resource::<CompleteRecord>();
 }
 
 pub fn replay(
@@ -169,14 +171,16 @@ pub fn advance_frame(
             replay_info.frame = new_record_frame;
 
             replay_info.next_ix = if initial.reverse {
-                record.get(0..std::cmp::min(replay_info.ix+1, record.len()))
+                record
+                    .get(0..std::cmp::min(replay_info.ix + 1, record.len()))
                     .iter()
                     .rev()
                     .position(|item| item.time < new_record_frame)
                     .map(|ix| replay_info.ix - ix + 1)
                     .unwrap_or(0)
             } else {
-                record.get(replay_info.ix..record.len())
+                record
+                    .get(replay_info.ix..record.len())
                     .iter()
                     .position(|item| item.time > new_record_frame)
                     .map(|ix| replay_info.ix + ix)
@@ -226,5 +230,27 @@ pub(crate) fn adjust_replay(
                 reverse: true,
             })
         }
+    }
+}
+
+// When the controller registers a movement, begins a new segment in the replay and puts the player
+// in control of the game, starting from the current point of the replay. If instead, the grave key
+// is pressed, we return to the ready state.
+pub(crate) fn exit_replay(
+    mut next_state: ResMut<NextState<MainState>>,
+    mut freeze_controller: EventWriter<FreezeController>,
+    controller: Res<Controller>,
+    keys: Res<Input<KeyCode>>,
+) {
+    // TODO resolve conflict between space bar for hard drop and pause/play replay
+
+    // check if we begin a new segment begin a new record, using controller inputs, and set
+    // NextState accordingly
+    if controller.any_activation() && !controller.hard_drop {
+        // TODO don't advance if we are at the end of the record
+        next_state.0 = Some(MainState::Playing);
+        freeze_controller.send(default()); // TODO fix controller freezing
+    } else if keys.just_pressed(KeyCode::Grave) {
+        next_state.0 = Some(MainState::Ready);
     }
 }

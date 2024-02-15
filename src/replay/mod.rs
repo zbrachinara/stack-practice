@@ -1,3 +1,4 @@
+use crate::controller;
 use crate::replay::record::{record, CompleteRecord, FirstFrame, PartialRecord};
 use crate::replay::replay::{replay, ReplayInfo};
 use crate::state::MainState;
@@ -29,11 +30,35 @@ impl Plugin for ReplayPlugin {
                     replay::adjust_replay,
                     replay::advance_frame,
                     replay::update_progress,
+                    replay::exit_replay.before(controller::reset_controller),
                 )
                     .chain()
                     .run_if(in_state(MainState::PostGame)),
             )
             .add_systems(OnExit(MainState::Playing), record::finalize_record)
+            // systems which run when starting a clean record
+            .add_systems(
+                OnTransition {
+                    from: MainState::PostGame,
+                    to: MainState::Ready,
+                },
+                record::reset_record,
+            )
+            .add_systems(
+                OnTransition {
+                    from: MainState::Ready,
+                    to: MainState::Playing,
+                },
+                record::initialize_time,
+            )
+            // systems which run when beginning a new segment into a record
+            .add_systems(
+                OnTransition {
+                    from: MainState::PostGame,
+                    to: MainState::Playing,
+                },
+                record::begin_new_segment,
+            )
             .add_systems(
                 OnEnter(MainState::PostGame),
                 (replay::initialize_replay, replay::setup_progress_bar),

@@ -1,4 +1,5 @@
 use crate::board::{queue::PieceQueue, Active, BoardQueryItem, Hold, Matrix, MatrixUpdate, Mino};
+use crate::replay::replay::ReplayInfo;
 use bevy::prelude::*;
 use std::ops::{Index, Range};
 use std::sync::Arc;
@@ -7,7 +8,7 @@ use std::sync::Arc;
 pub struct RecordSegment {
     #[deref]
     data: Vec<RecordItem>,
-    children: Vec<(usize, Arc<RecordSegment>)>,
+    children: Vec<(u64, Arc<RecordSegment>)>,
 }
 
 /// The record being built by the current game
@@ -18,8 +19,8 @@ pub struct PartialRecord(RecordSegment);
 #[derive(Resource, Deref, DerefMut, Default, Debug)]
 pub struct CompleteRecord {
     #[deref]
-    segments: Vec<Arc<RecordSegment>>,
-    separations: Vec<usize>,
+    pub segments: Vec<Arc<RecordSegment>>,
+    pub separations: Vec<usize>,
 }
 
 #[derive(Debug)]
@@ -54,11 +55,34 @@ impl CompleteRecord {
     }
 
     pub fn add_segment(&mut self, segment: RecordSegment) {
-        if let Some(parent) = self.segments.last() {
-            unimplemented!("Insert child into parent")
+        let segment = Arc::new(segment);
+        if let Some(parent) = self.segments.last_mut() {
+            let first_frame = segment.first().unwrap().time;
+            // find the insert location
+            let location = parent
+                .children
+                .iter()
+                .position(|(t, _)| *t > first_frame)
+                .unwrap_or(parent.children.len());
+
+            // find the separation location
+            let separation_ix = parent
+                .data
+                .iter()
+                .position(|e| e.time >= first_frame)
+                .unwrap();
+
+            // TODO check if unsafe (I think should be ok since we have a unique ref to the entire record)
+            Arc::get_mut(parent)
+                .unwrap()
+                .children
+                .insert(location, (first_frame, segment.clone()));
+
+            self.segments.push(segment);
+            self.separations.push(separation_ix);
         } else {
             self.separations = vec![0];
-            self.segments = vec![Arc::new(segment)];
+            self.segments = vec![segment];
         }
     }
 }
@@ -71,6 +95,7 @@ impl Index<usize> for CompleteRecord {
             .separations
             .iter()
             .enumerate()
+            .rev()
             .find(|(_, sep)| **sep <= index)
             .unwrap();
         &self.segments[segment_no][index - segment_pt]
@@ -207,5 +232,38 @@ impl<'world> BoardQueryItem<'world> {
             }
             _ => self.apply_record(record),
         }
+    }
+}
+
+pub(crate) fn reset_record(mut commands: Commands) {
+    commands.init_resource::<PartialRecord>();
+    commands.init_resource::<CompleteRecord>();
+}
+
+/// When a new record has been instantiated and a game begins, insert the [`FirstFrame`] resource
+/// referring to the current frame
+pub(crate) fn initialize_time(mut commands: Commands, time: Res<Time>) {
+    commands.insert_resource(FirstFrame(discretized_time(&time)));
+}
+
+/// Prunes the record and cuts off and sets the first frame according to the current place
+pub(crate) fn begin_new_segment(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut record: ResMut<CompleteRecord>,
+    meta: Res<ReplayInfo>,
+) {
+    commands.init_resource::<PartialRecord>();
+
+    let offset = meta.frame;
+    commands.insert_resource(FirstFrame(discretized_time(&time) - offset));
+
+    if let Some(p) = record
+        .segments
+        .iter()
+        .position(|seg| seg.first().unwrap().time > meta.frame)
+    {
+        record.segments.drain(p..);
+        record.separations.drain(p..);
     }
 }
