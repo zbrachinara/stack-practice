@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use duplicate::duplicate;
 use itertools::Itertools;
 
-use crate::board::BoardQuery;
+use crate::board::{Active, BoardQuery};
 use crate::controller::Controller;
 use crate::state::MainState;
 
@@ -243,16 +243,20 @@ pub(crate) fn exit_replay(
     mut next_state: ResMut<NextState<MainState>>,
     controller: Res<Controller>,
     keys: Res<Input<KeyCode>>,
+    active_piece: Query<&Active>,
 ) {
     // TODO resolve conflict between space bar for hard drop and pause/play replay
 
-    // check if we begin a new segment begin a new record, using controller inputs, and set
-    // NextState accordingly
-    if controller.any_activation() && !controller.hard_drop {
-        // TODO don't advance if we are at the end of the record
+    let active_piece_exists = active_piece
+        .get_single()
+        .is_ok_and(|piece| piece.0.is_some());
+
+    if controller.any_activation() && !controller.hard_drop && active_piece_exists {
+        // we are branching the current record
         next_state.0 = Some(MainState::Playing);
         // TODO freeze controller state until after first frame has run
     } else if keys.just_pressed(KeyCode::Grave) {
+        // we are beginning a new record
         next_state.0 = Some(MainState::Ready);
     }
 }
