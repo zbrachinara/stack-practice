@@ -1,7 +1,7 @@
-use crate::controller;
 use crate::replay::record::{record, CompleteRecord, FirstFrame, PartialRecord};
-use crate::replay::replay::{replay, ReplayInfo};
+use crate::replay::replay::{replay, DeferUnfreeze, ReplayInfo};
 use crate::state::MainState;
+use crate::{board, controller};
 use bevy::prelude::*;
 
 pub mod record;
@@ -13,6 +13,7 @@ impl Plugin for ReplayPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CompleteRecord>()
             .init_resource::<PartialRecord>()
+            .add_event::<DeferUnfreeze>()
             .add_systems(
                 Update,
                 replay.run_if(
@@ -59,6 +60,13 @@ impl Plugin for ReplayPlugin {
                 },
                 record::begin_new_segment,
             )
+            .add_systems(
+                Update,
+                replay::unfreeze_controller_after_exit
+                    .run_if(on_event::<DeferUnfreeze>())
+                    .after(board::update::update_board),
+            )
+            // common systems which run on each entrance into/exit from replay
             .add_systems(
                 OnEnter(MainState::PostGame),
                 (replay::initialize_replay, replay::setup_progress_bar),

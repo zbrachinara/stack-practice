@@ -212,7 +212,7 @@ pub(super) fn spawn_piece(
 }
 
 /// Update the state of the memory-representation of the board using player input
-pub(super) fn update_board(
+pub(crate) fn update_board(
     mut boards: Query<BoardQuery>,
     mut spawner: EventWriter<PieceSpawnEvent>,
     controller: Res<Controller>,

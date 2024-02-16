@@ -154,12 +154,20 @@ pub fn reset_controller(mut controller: ResMut<Controller>) {
     controller.repeater_left = repeater_left;
 }
 
+#[derive(Resource, Default, Deref, DerefMut)]
+pub struct ControllerFrozen(bool);
+
+pub fn not_frozen(state: Res<ControllerFrozen>) -> bool {
+    !**state
+}
+
 pub struct ControllerPlugin;
 
 impl Plugin for ControllerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Controller>()
-            .add_systems(Update, process_input)
-            .add_systems(PostUpdate, reset_controller);
+            .init_resource::<ControllerFrozen>()
+            .add_systems(Update, process_input.run_if(not_frozen)) // could be an issue if bevy decides to change the order of run condition execution
+            .add_systems(PostUpdate, reset_controller.run_if(not_frozen));
     }
 }

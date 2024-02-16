@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use smart_default::SmartDefault;
 
 pub mod queue;
-mod update;
+pub mod update;
 
 use crate::controller::process_input;
 use crate::{screens::GlobalSettings, state::MainState};

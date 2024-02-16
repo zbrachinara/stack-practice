@@ -9,7 +9,7 @@ use duplicate::duplicate;
 use itertools::Itertools;
 
 use crate::board::{Active, BoardQuery};
-use crate::controller::Controller;
+use crate::controller::{Controller, ControllerFrozen};
 use crate::state::MainState;
 
 /// Stores information about the state of the replay (i.e. paused or played, frames progressed).
@@ -236,6 +236,9 @@ pub(crate) fn adjust_replay(
     }
 }
 
+#[derive(Event, Default)]
+pub(crate) struct DeferUnfreeze;
+
 // When the controller registers a movement, begins a new segment in the replay and puts the player
 // in control of the game, starting from the current point of the replay. If instead, the grave key
 // is pressed, we return to the ready state.
@@ -244,6 +247,8 @@ pub(crate) fn exit_replay(
     controller: Res<Controller>,
     keys: Res<Input<KeyCode>>,
     active_piece: Query<&Active>,
+    mut controller_freeze: ResMut<ControllerFrozen>,
+    mut defer_unfreeze: EventWriter<DeferUnfreeze>,
 ) {
     // TODO resolve conflict between space bar for hard drop and pause/play replay
 
@@ -254,9 +259,15 @@ pub(crate) fn exit_replay(
     if controller.any_activation() && !controller.hard_drop && active_piece_exists {
         // we are branching the current record
         next_state.0 = Some(MainState::Playing);
-        // TODO freeze controller state until after first frame has run
+        **controller_freeze = true;
+        defer_unfreeze.send(default());
     } else if keys.just_pressed(KeyCode::Grave) {
         // we are beginning a new record
         next_state.0 = Some(MainState::Ready);
     }
+}
+
+pub(crate) fn unfreeze_controller_after_exit(mut freeze_state: ResMut<ControllerFrozen>) {
+    println!("unfreeze was run");
+    **freeze_state = false;
 }
