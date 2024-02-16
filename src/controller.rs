@@ -1,6 +1,5 @@
 use crate::board::Settings;
 use crate::screens::GlobalSettings;
-use crate::state::MainState;
 use bevy::prelude::*;
 
 #[rustfmt::skip]
