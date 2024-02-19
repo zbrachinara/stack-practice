@@ -302,7 +302,7 @@ pub(crate) fn update_board(
                         position: ivec2(4, 22),
                         rotation: RotationState::Up,
                     },
-                })
+                });
             }
         }
     }

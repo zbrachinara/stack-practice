@@ -5,6 +5,7 @@ use bevy::{
     ecs::system::Resource,
     render::texture::Image,
 };
+use bevy_asset_loader::prelude::ConfigureLoadingState;
 use bevy_asset_loader::{
     asset_collection::AssetCollection,
     loading_state::{LoadingState, LoadingStateAppExt},
@@ -64,16 +65,17 @@ impl MinoTextures {
 
 impl Plugin for StackingAssetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins((Material2dPlugin::<MatrixMaterial>::default(),))
+        app.add_plugins(Material2dPlugin::<MatrixMaterial>::default())
             .init_asset::<ShapeTable>()
             .init_asset::<KickTable>()
             .add_loading_state(
-                LoadingState::new(MainState::Loading).continue_to_state(MainState::Ready),
+                LoadingState::new(MainState::Loading)
+                    .continue_to_state(MainState::Ready)
+                    .load_collection::<MinoTextures>()
+                    .load_collection::<DefaultShapeTable>()
+                    .load_collection::<DefaultKickTable>(),
             )
             .init_asset_loader::<ShapeTableLoader>()
-            .init_asset_loader::<KickTableLoader>()
-            .add_collection_to_loading_state::<_, MinoTextures>(MainState::Loading)
-            .add_collection_to_loading_state::<_, DefaultShapeTable>(MainState::Loading)
-            .add_collection_to_loading_state::<_, DefaultKickTable>(MainState::Loading);
+            .init_asset_loader::<KickTableLoader>();
     }
 }

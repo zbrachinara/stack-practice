@@ -1,9 +1,9 @@
 #import bevy_pbr::forward_io::VertexOutput
 
-@group(1) @binding(0) var<uniform> dimensions: vec2u;
-@group(1) @binding(1) var mino_textures: texture_2d_array<f32>;
-@group(1) @binding(2) var mino_textures_sampler: sampler;
-@group(1) @binding(3) var<storage, read> data: array<u32>;
+@group(2) @binding(0) var<uniform> dimensions: vec2u;
+@group(2) @binding(1) var mino_textures: texture_2d_array<f32>;
+@group(2) @binding(2) var mino_textures_sampler: sampler;
+@group(2) @binding(3) var<storage, read> data: array<u32>;
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4f {

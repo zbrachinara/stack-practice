@@ -17,9 +17,9 @@ harness=false
 opt-level = 3
 
 [dependencies]
-bevy = { version = "0.12.1", features = ["dynamic_linking", "file_watcher"] }
-bevy_asset_loader = "0.18.0"
-bevy_egui = "0.24.0"
+bevy = { version = "0.13.0", features = ["dynamic_linking", "file_watcher"] }
+bevy_asset_loader = "0.20.0"
+bevy_egui = {git = "https://github.com/mvlabat/bevy_egui/", rev="refs/pull/236/head"} # TODO get the latest bevy_egui when published (should be 0.25)
 duplicate = "1.0.0"
 futures = "0.3.29"
 if_chain = "1.0.2"
@@ -30,7 +30,7 @@ rand_pcg = { version = "0.3.1", features = ["serde1"] }
 ron = "0.8.1"
 serde = "1.0.193"
 smart-default = "0.7.1"
-strum = { version = "0.25.0", features = ["derive"] }
+strum = { version = "0.26.1", features = ["derive"] }
 tap = "1.0.1"
 tracing = "0.1.40"
 

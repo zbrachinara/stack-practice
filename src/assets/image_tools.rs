@@ -22,7 +22,7 @@ pub fn stack_images(images: &[Handle<Image>], server: &Assets<Image>) -> Image {
             .expect("Failed to copy image while creating an image stack");
     }
 
-    Image::from_dynamic(buffer.into(), true).tap_mut(|i| {
+    Image::from_dynamic(buffer.into(), true, default()).tap_mut(|i| {
         i.reinterpret_stacked_2d_as_array(images.len() as u32);
     })
 }

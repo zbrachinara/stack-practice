@@ -56,7 +56,7 @@ pub(crate) fn setup_progress_bar(
         .spawn(ProgressBarBundle {
             progressbar: default(),
             material_node_bundle: MaterialNodeBundle {
-                material: materials.add(default()),
+                material: materials.add(ProgressBarMaterial::default()),
                 style,
                 ..default()
             },
@@ -202,7 +202,7 @@ pub fn advance_frame(
 
 pub(crate) fn adjust_replay(
     mut replay_info: ResMut<ReplayInfo>,
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
     let record_frame = replay_info.frame;
@@ -220,7 +220,7 @@ pub(crate) fn adjust_replay(
         }
     }
 
-    if input.just_pressed(KeyCode::R) {
+    if input.just_pressed(KeyCode::KeyR) {
         if matches!(
             replay_info.playing,
             Some(ActiveReplayMeta { reverse: true, .. })
@@ -245,7 +245,7 @@ pub(crate) struct DeferUnfreeze;
 pub(crate) fn exit_replay(
     mut next_state: ResMut<NextState<MainState>>,
     controller: Res<Controller>,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     active_piece: Query<&Active>,
     mut controller_freeze: ResMut<ControllerFrozen>,
     mut defer_unfreeze: EventWriter<DeferUnfreeze>,
@@ -261,7 +261,7 @@ pub(crate) fn exit_replay(
         next_state.0 = Some(MainState::Playing);
         **controller_freeze = true;
         defer_unfreeze.send(default());
-    } else if keys.just_pressed(KeyCode::Grave) {
+    } else if keys.just_pressed(KeyCode::Backquote) {
         // we are beginning a new record
         next_state.0 = Some(MainState::Ready);
     }

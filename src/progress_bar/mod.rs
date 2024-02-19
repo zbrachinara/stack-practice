@@ -69,9 +69,9 @@ pub struct ProgressBarMaterial {
     #[uniform(1)]
     progress: f32,
     /// The color of each section
-    #[storage(2)]
+    #[storage(2, read_only)]
     sections_color: Vec<Color>,
-    #[storage(3)]
+    #[storage(3, read_only)]
     sections_start_percentage: Vec<f32>,
     /// the length of the `sections_color` / `sections_start_percentage` vec.
     /// needs to be set for the shader

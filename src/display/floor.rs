@@ -40,18 +40,16 @@ pub(crate) fn spawn_drop_shadow(
             TextureDimension::D1,
             &[255, 255, 255, 255],
             TextureFormat::Rgba8UnormSrgb,
+            default(),
         ));
 
         let q = commands
             .spawn(MaterialMesh2dBundle {
                 mesh: meshes
-                    .add(
-                        shape::Quad::new(Vec2::new(
-                            MATRIX_DEFAULT_LEGAL_BOUNDS.x as f32 * CELL_SIZE as f32,
-                            256.,
-                        ))
-                        .into(),
-                    )
+                    .add(Rectangle::new(
+                        MATRIX_DEFAULT_LEGAL_BOUNDS.x as f32 * CELL_SIZE as f32,
+                        256.,
+                    ))
                     .into(),
                 material: materials.add(DropShadowMaterial {
                     base: image.clone(),

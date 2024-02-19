@@ -16,7 +16,7 @@ pub struct MatrixMaterial {
     #[texture(1, dimension = "2d_array")]
     #[sampler(2)]
     pub mino_textures: Handle<Image>,
-    #[storage(3)]
+    #[storage(3, read_only)]
     pub data: Vec<u32>,
 }
 
@@ -44,9 +44,9 @@ fn corners(r: IRect) -> [IVec2; 4] {
     ]
 }
 
-impl<'w, 's> MatrixMaterialSpawner<'w, 's> {
+impl<'w, 's, 'all> MatrixMaterialSpawner<'w, 's> where 'w: 'all, 's: 'all {
     fn quad_anchored(&mut self, r: IRect) -> Mesh2dHandle {
-        let mesh_struct = Mesh::new(PrimitiveTopology::TriangleList)
+        let mesh_struct = Mesh::new(PrimitiveTopology::TriangleList, default())
             .with_inserted_attribute(
                 Mesh::ATTRIBUTE_POSITION,
                 corners(r)
@@ -57,35 +57,31 @@ impl<'w, 's> MatrixMaterialSpawner<'w, 's> {
                 Mesh::ATTRIBUTE_UV_0,
                 vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
             )
-            .with_indices(Some(Indices::U32(vec![0, 3, 1, 1, 3, 2])));
+            .with_inserted_indices(Indices::U32(vec![0, 3, 1, 1, 3, 2]));
 
         self.mesh_server.add(mesh_struct).into()
     }
 
-    pub fn spawn_centered(&mut self, bounds: IVec2) -> EntityCommands<'w, 's, '_> {
+    pub fn spawn_centered(&'all mut self, bounds: IVec2) -> EntityCommands<'all> {
         self.spawn(IRect::from_center_size(IVec2::ZERO, bounds))
     }
 
     pub fn spawn_centered_with_data(
-        &mut self,
+        &'all mut self,
         bounds: IVec2,
         data: Vec<u32>,
-    ) -> EntityCommands<'w, 's, '_> {
+    ) -> EntityCommands<'all> {
         self.spawn_with_data(IRect::from_center_size(IVec2::ZERO, bounds), data)
     }
 
-    pub fn spawn(&mut self, grid_bounds: IRect) -> EntityCommands<'w, 's, '_> {
+    pub fn spawn(&'all mut self, grid_bounds: IRect) -> EntityCommands<'all> {
         self.spawn_with_data(
             grid_bounds,
             vec![0; grid_bounds.size().pipe(|u| u.x * u.y) as usize],
         )
     }
 
-    pub fn spawn_with_data(
-        &mut self,
-        grid_bounds: IRect,
-        data: Vec<u32>,
-    ) -> EntityCommands<'w, 's, '_> {
+    pub fn spawn_with_data(&'all mut self, grid_bounds: IRect, data: Vec<u32>) -> EntityCommands<'all> {
         let all_textures = stack_images(&self.mino_textures.view(), &self.texture_server);
         let size = grid_bounds.size();
 

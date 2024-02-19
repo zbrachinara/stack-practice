@@ -1,4 +1,4 @@
-use bevy::ecs::query::WorldQuery;
+use bevy::ecs::query::{QueryData};
 use bevy::math::{ivec2, IVec2};
 use bevy::prelude::*;
 use smart_default::SmartDefault;
@@ -251,8 +251,8 @@ fn start_game(
 
 pub struct BoardPlugin;
 
-#[derive(WorldQuery)]
-#[world_query(mutable)]
+#[derive(QueryData)]
+#[query_data(mutable)]
 pub struct BoardQuery {
     pub matrix: &'static mut Matrix,
     pub active: &'static mut Active,

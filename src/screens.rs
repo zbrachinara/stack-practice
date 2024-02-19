@@ -115,11 +115,11 @@ pub fn apply_settings(
 }
 
 pub fn start_playing(
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<NextState<MainState>>,
     settings: Res<GlobalSettings>,
 ) {
-    if input.just_pressed(KeyCode::Grave) && Settings::try_from(&*settings).is_ok() {
+    if input.just_pressed(KeyCode::Backquote) && Settings::try_from(&*settings).is_ok() {
         state.0 = Some(MainState::Playing);
     }
 }

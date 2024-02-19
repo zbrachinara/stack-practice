@@ -13,6 +13,6 @@ pub struct StatePlugin;
 
 impl Plugin for StatePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_state::<MainState>();
+        app.init_state::<MainState>();
     }
 }

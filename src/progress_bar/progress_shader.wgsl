@@ -1,17 +1,11 @@
 #import bevy_ui::ui_vertex_output::UiVertexOutput
 
-@group(1) @binding(0)
-var<uniform> empty_color: vec4<f32>;
-@group(1) @binding(1)
-var<uniform> progress: f32;
-@group(1) @binding(2)
-var<storage> segments: array<vec4<f32>>;
-@group(1) @binding(3)
-var<storage> amount: array<f32>;
-@group(1) @binding(4)
-var<uniform> count: u32;
-@group(1) @binding(5)
-var<uniform> orientation: u32;
+@group(1) @binding(0) var<uniform> empty_color: vec4<f32>;
+@group(1) @binding(1) var<uniform> progress: f32;
+@group(1) @binding(2) var<storage> segments: array<vec4<f32>>;
+@group(1) @binding(3) var<storage> amount: array<f32>;
+@group(1) @binding(4) var<uniform> count: u32;
+@group(1) @binding(5) var<uniform> orientation: u32;
 
 @fragment
 fn fragment(

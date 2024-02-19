@@ -87,7 +87,7 @@ impl Repeatable {
 
 /// Turns raw kb input into controller input which directly maps to actions on the board
 pub fn process_input(
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     settings: Res<GlobalSettings>,
     mut cached_settings: Local<Settings>,
@@ -98,7 +98,7 @@ pub fn process_input(
     if keys.just_pressed(KeyCode::Space) {
         controller.hard_drop = true;
     }
-    if keys.pressed(KeyCode::S) {
+    if keys.pressed(KeyCode::KeyS) {
         controller.soft_drop = true;
     }
     if keys.just_pressed(KeyCode::Comma) {
@@ -126,11 +126,11 @@ pub fn process_input(
     let shift_left =
         -(controller
             .repeater_left
-            .update(&time, &cached_settings, keys.pressed(KeyCode::A)) as i32);
+            .update(&time, &cached_settings, keys.pressed(KeyCode::KeyA)) as i32);
     let shift_right =
         controller
             .repeater_right
-            .update(&time, &cached_settings, keys.pressed(KeyCode::D)) as i32;
+            .update(&time, &cached_settings, keys.pressed(KeyCode::KeyD)) as i32;
 
     // if both left and right shift is active, take the one activated latest, or, if they were activated around the same
     // time, prefer left.

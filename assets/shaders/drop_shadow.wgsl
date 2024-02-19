@@ -1,7 +1,7 @@
 #import bevy_pbr::forward_io::VertexOutput;
 
-@group(1) @binding(1) var texture: texture_1d<f32>;
-@group(1) @binding(2) var samp: sampler;
+@group(2) @binding(1) var texture: texture_1d<f32>;
+@group(2) @binding(2) var samp: sampler;
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
