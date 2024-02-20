@@ -26,7 +26,7 @@ fn fragment(
     }
     var current_amount: f32 = 0.0;
     for (var i = 0u; i < count; i++) {
-        current_amount += amount[i] * progress;
+        current_amount += amount[i] ;
         if current_amount > position {
             return segments[i];
         }

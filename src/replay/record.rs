@@ -2,13 +2,13 @@ use crate::board::{queue::PieceQueue, Active, BoardQueryItem, Hold, Matrix, Matr
 use crate::replay::replay::ReplayInfo;
 use bevy::prelude::*;
 use std::ops::{Index, Range};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Deref, DerefMut, Default, Debug)]
 pub struct RecordSegment {
     #[deref]
     data: Vec<RecordItem>,
-    children: Vec<(u64, Arc<RecordSegment>)>,
+    children: Mutex<Vec<(u64, Arc<RecordSegment>)>>,
 }
 
 /// The record being built by the current game
@@ -58,12 +58,13 @@ impl CompleteRecord {
         let segment = Arc::new(segment);
         if let Some(parent) = self.segments.last_mut() {
             let first_frame = segment.first().unwrap().time;
+            let mut children = parent.children.lock().unwrap();
+
             // find the insert location
-            let location = parent
-                .children
+            let location = children
                 .iter()
                 .position(|(t, _)| *t > first_frame)
-                .unwrap_or(parent.children.len());
+                .unwrap_or(children.len());
 
             // find the separation location
             let separation_ix = parent
@@ -72,11 +73,8 @@ impl CompleteRecord {
                 .position(|e| e.time >= first_frame)
                 .unwrap();
 
-            // TODO check if unsafe (I think should be ok since we have a unique ref to the entire record)
-            Arc::get_mut(parent)
-                .unwrap()
-                .children
-                .insert(location, (first_frame, segment.clone()));
+            children.insert(location, (first_frame, segment.clone()));
+            drop(children);
 
             self.segments.push(segment);
             self.separations.push(separation_ix);

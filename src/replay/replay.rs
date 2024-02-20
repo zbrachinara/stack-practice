@@ -43,6 +43,7 @@ pub struct ReplayBar;
 pub(crate) fn setup_progress_bar(
     mut commands: Commands,
     mut materials: ResMut<Assets<ProgressBarMaterial>>,
+    record: Res<CompleteRecord>,
 ) {
     let style = Style {
         position_type: PositionType::Absolute,
@@ -52,9 +53,18 @@ pub(crate) fn setup_progress_bar(
         top: Val::Percent(2.5),
         ..default()
     };
+
+
     commands
         .spawn(ProgressBarBundle {
-            progressbar: default(),
+            progressbar: ProgressBar {
+                sections: record.segments.iter().enumerate().map(|(ix, segment)| {
+                    let time = segment.last().unwrap().time;
+                    let color = Color::hsl(0., 0.5, 0.85f32.powi(ix as i32));
+                    (time as u32, color)
+                }).collect_vec(),
+                ..default()
+            },
             material_node_bundle: MaterialNodeBundle {
                 material: materials.add(ProgressBarMaterial::default()),
                 style,
@@ -83,12 +93,6 @@ pub fn initialize_replay(
 ) {
     **zoom = REPLAY_CAMERA_ZOOM;
 
-    println!("{:?}", record.separations);
-    println!(
-        "{:?}",
-        record.segments.iter().map(|p| p.len()).collect_vec()
-    );
-
     let replay_info = ReplayInfo {
         frame: record.last_frame(),
         ix: record.len(),
@@ -96,7 +100,7 @@ pub fn initialize_replay(
         playing: None,
     };
 
-    println!("{replay_info:?}");
+    tracing::info!("Entering replay with {replay_info:?}");
     commands.insert_resource(replay_info);
 }
 
