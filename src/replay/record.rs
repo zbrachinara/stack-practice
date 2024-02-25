@@ -31,10 +31,10 @@ pub struct RecordItem {
 
 #[derive(Debug)]
 pub enum RecordData {
-    ActiveChange { new_position: Option<Mino> },
-    QueueChange { new_queue: PieceQueue },
-    Hold { replace_with: Hold },
-    MatrixChange { update: MatrixUpdate },
+    ActiveChange(Option<Mino>),
+    QueueChange(PieceQueue),
+    Hold(Hold),
+    MatrixChange(MatrixUpdate),
 }
 
 impl CompleteRecord {
@@ -161,27 +161,21 @@ pub(crate) fn record(
     for (active, queue, hold, matrix) in state.iter() {
         if active.is_changed() {
             record.push(RecordItem {
-                data: RecordData::ActiveChange {
-                    new_position: active.0,
-                },
+                data: RecordData::ActiveChange(active.0),
                 time: dt,
             })
         }
 
         if queue.is_changed() {
             record.push(RecordItem {
-                data: RecordData::QueueChange {
-                    new_queue: queue.clone(),
-                },
+                data: RecordData::QueueChange(queue.clone()),
                 time: dt,
             })
         }
 
         if hold.is_changed() {
             record.push(RecordItem {
-                data: RecordData::Hold {
-                    replace_with: *hold,
-                },
+                data: RecordData::Hold(*hold),
                 time: dt,
             })
         }
@@ -189,7 +183,7 @@ pub(crate) fn record(
         if matrix.is_changed() {
             for &up in &matrix.updates {
                 record.push(RecordItem {
-                    data: RecordData::MatrixChange { update: up },
+                    data: RecordData::MatrixChange(up),
                     time: dt,
                 })
             }
@@ -207,10 +201,10 @@ pub(crate) fn finalize_record(
 impl<'world> BoardQueryItem<'world> {
     pub fn apply_record(&mut self, record: &RecordItem) {
         match &record.data {
-            RecordData::ActiveChange { new_position } => self.active.0 = *new_position,
-            RecordData::QueueChange { new_queue } => *(self.queue) = new_queue.clone(),
-            RecordData::Hold { replace_with } => *(self.hold) = *replace_with,
-            RecordData::MatrixChange { update } => {
+            RecordData::ActiveChange(new_position) => self.active.0 = *new_position,
+            RecordData::QueueChange(new_queue) => *(self.queue) = new_queue.clone(),
+            RecordData::Hold(replace_with) => *(self.hold) = *replace_with,
+            RecordData::MatrixChange(update) => {
                 self.matrix.updates.push(*update);
                 self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.new;
             }
@@ -221,10 +215,10 @@ impl<'world> BoardQueryItem<'world> {
     /// [`Self::apply_record`]. This can be used, for example, to rewind through a record.
     pub fn undo_record(&mut self, record: &RecordItem) {
         match &record.data {
-            RecordData::MatrixChange { update } => {
+            RecordData::MatrixChange(update) => {
                 let update = update.invert();
                 self.apply_record(&RecordItem {
-                    data: RecordData::MatrixChange { update },
+                    data: RecordData::MatrixChange(update),
                     time: record.time,
                 }) // TODO this should be cleaner (no need to duplicate time, etc)
             }
