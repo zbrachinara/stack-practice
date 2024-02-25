@@ -1,6 +1,10 @@
-use crate::board::{queue::PieceQueue, Active, BoardQueryItem, Hold, Matrix, MatrixUpdate, Mino};
+use crate::board::{
+    queue::PieceQueue, Active, BoardQueryItem, Hold, Matrix, MatrixUpdate, Mino, MinoKind,
+};
 use crate::replay::replay::ReplayInfo;
+use bevy::math::ivec2;
 use bevy::prelude::*;
+use smart_default::SmartDefault;
 use std::ops::{Index, Range};
 use std::sync::{Arc, Mutex};
 
@@ -150,15 +154,56 @@ pub fn discretized_time(time: &Time) -> u64 {
     (time.elapsed().as_millis() * 60 / 1000) as u64
 }
 
+/// A record of what the contents of the matrix were in the previous frame. The frame transition is
+/// managed by [`record`]
+#[derive(Component, Deref, DerefMut, SmartDefault)]
+pub struct PreviousMatrix {
+    #[default(Matrix::default().data)]
+    data: Vec<Vec<MinoKind>>,
+}
+
+/// Compares the contents of the new and old matrices, at the same time replacing the contents of
+/// old with new. Since each update contains its own position information, the order in which the
+/// updates are applied is important and should be kept.
+#[allow(clippy::ptr_arg)]
+fn diff_and_copy<'a>(
+    // TODO better lifetime management
+    new: &'a Vec<Vec<MinoKind>>,
+    old: &'a mut Vec<Vec<MinoKind>>,
+) -> impl Iterator<Item = MatrixUpdate> + 'a {
+    let row_size = old[0].len();
+    let old_mut = old.iter_mut().flat_map(|i| i.iter_mut());
+    let new_updates = old_mut
+        .zip(new.iter().flat_map(|i| i.iter().copied()))
+        .zip((0..).map(move |ix| ivec2(ix % row_size as i32, ix / row_size as i32)))
+        .filter(|((old, new), _)| *old != new)
+        .map(|((old, new), loc)| {
+            let update = MatrixUpdate {
+                loc,
+                old: *old,
+                new,
+            };
+            *old = new;
+            update
+        });
+    new_updates
+}
+
 pub(crate) fn record(
-    state: Query<(Ref<Active>, Ref<PieceQueue>, Ref<Hold>, Ref<Matrix>)>,
+    mut state: Query<(
+        Ref<Active>,
+        Ref<PieceQueue>,
+        Ref<Hold>,
+        Ref<Matrix>,
+        &mut PreviousMatrix,
+    )>,
     mut record: ResMut<PartialRecord>,
     time: Res<Time>,
     first_frame: Res<FirstFrame>,
 ) {
     let current_frame = discretized_time(&time);
     let dt = current_frame - first_frame.0;
-    for (active, queue, hold, matrix) in state.iter() {
+    for (active, queue, hold, matrix, mut previous_matrix) in state.iter_mut() {
         if active.is_changed() {
             record.push(RecordItem {
                 data: RecordData::ActiveChange(active.0),
@@ -181,7 +226,8 @@ pub(crate) fn record(
         }
 
         if matrix.is_changed() {
-            for &up in &matrix.updates {
+            let updates = diff_and_copy(&matrix.data, &mut previous_matrix.data);
+            for up in updates {
                 record.push(RecordItem {
                     data: RecordData::MatrixChange(up),
                     time: dt,
@@ -244,6 +290,7 @@ pub(crate) fn begin_new_segment(
     time: Res<Time>,
     mut record: ResMut<CompleteRecord>,
     meta: Res<ReplayInfo>,
+    mut boards: Query<(&Matrix, &mut PreviousMatrix)>,
 ) {
     commands.init_resource::<PartialRecord>();
 
@@ -257,5 +304,9 @@ pub(crate) fn begin_new_segment(
     {
         record.segments.drain(p..);
         record.separations.drain(p..);
+    }
+
+    for (this_board, mut prev_board) in boards.iter_mut() {
+        prev_board.data = this_board.data.clone()
     }
 }

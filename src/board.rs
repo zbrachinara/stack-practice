@@ -8,6 +8,7 @@ pub mod update;
 
 use crate::controller::process_input;
 use crate::{screens::GlobalSettings, state::MainState};
+use crate::replay::record::PreviousMatrix;
 
 use self::{
     queue::PieceQueue,
@@ -211,6 +212,7 @@ pub struct Board {
     queue: PieceQueue,
     drop_clock: DropClock,
     settings: Settings,
+    previous_matrix: PreviousMatrix
 }
 
 fn respawn_board(
