@@ -227,12 +227,10 @@ pub(crate) fn record(
 
         if matrix.is_changed() {
             let updates = diff_and_copy(&matrix.data, &mut previous_matrix.data);
-            for up in updates {
-                record.push(RecordItem {
-                    data: RecordData::MatrixChange(up),
-                    time: dt,
-                })
-            }
+            record.extend(updates.map(|up| RecordItem {
+                data: RecordData::MatrixChange(up),
+                time: dt,
+            }))
         }
     }
 }
@@ -251,7 +249,6 @@ impl<'world> BoardQueryItem<'world> {
             RecordData::QueueChange(new_queue) => *(self.queue) = new_queue.clone(),
             RecordData::Hold(replace_with) => *(self.hold) = *replace_with,
             RecordData::MatrixChange(update) => {
-                self.matrix.updates.push(*update);
                 self.matrix.data[update.loc.y as usize][update.loc.x as usize] = update.new;
             }
         }
@@ -306,6 +303,10 @@ pub(crate) fn begin_new_segment(
         record.separations.drain(p..);
     }
 
+    // Since recording does not take place during the replay, the previous frame's matrix is not
+    // correct. Branching starts on the frame after the current frame of the replay, so the
+    // "previous frame"'s matrix (which is in use once recording starts) should actually be the same
+    // as this frame's matrix
     for (this_board, mut prev_board) in boards.iter_mut() {
         prev_board.data = this_board.data.clone()
     }

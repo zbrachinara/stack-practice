@@ -33,9 +33,14 @@ pub(crate) fn redraw_board(
         let material_id = ch.iter().find_map(|c| children.get(*c).ok()).unwrap();
         let material = material_server.get_mut(material_id).unwrap();
 
-        for up in board.updates.iter() {
-            let ix = up.loc.y * bounds.true_bounds.x + up.loc.x;
-            material.data[ix as usize] = up.new as u32;
+        let cells = board.data.iter().enumerate().flat_map(|(y, r)| {
+            r.iter()
+                .enumerate()
+                .map(move |(x, c)| (y * bounds.true_bounds.x as usize + x, c))
+        });
+
+        for (ix, data) in cells {
+            material.data[ix] = *data as u32;
         }
     }
 }

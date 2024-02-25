@@ -1,4 +1,4 @@
-use bevy::ecs::query::{QueryData};
+use bevy::ecs::query::QueryData;
 use bevy::math::{ivec2, IVec2};
 use bevy::prelude::*;
 use smart_default::SmartDefault;
@@ -7,8 +7,8 @@ pub mod queue;
 pub mod update;
 
 use crate::controller::process_input;
-use crate::{screens::GlobalSettings, state::MainState};
 use crate::replay::record::PreviousMatrix;
+use crate::{screens::GlobalSettings, state::MainState};
 
 use self::{
     queue::PieceQueue,
@@ -120,7 +120,6 @@ pub struct Active(pub Option<Mino>);
 #[derive(Component)]
 pub struct Matrix {
     pub data: Vec<Vec<MinoKind>>,
-    pub updates: Vec<MatrixUpdate>,
 }
 
 impl Default for Matrix {
@@ -129,7 +128,6 @@ impl Default for Matrix {
             data: std::iter::repeat_with(|| vec![MinoKind::E; MATRIX_DEFAULT_SIZE.x as usize])
                 .take(MATRIX_DEFAULT_SIZE.y as usize)
                 .collect(),
-            updates: Default::default(),
         }
     }
 }
@@ -212,7 +210,7 @@ pub struct Board {
     queue: PieceQueue,
     drop_clock: DropClock,
     settings: Settings,
-    previous_matrix: PreviousMatrix
+    previous_matrix: PreviousMatrix,
 }
 
 fn respawn_board(
@@ -227,12 +225,6 @@ fn respawn_board(
         settings: Settings::try_from(&*settings).unwrap(),
         ..default()
     });
-}
-
-fn clear_update_queue(mut boards: Query<&mut Matrix>) {
-    for mut board in boards.iter_mut() {
-        board.updates.clear();
-    }
 }
 
 fn start_game(
@@ -285,7 +277,6 @@ impl Plugin for BoardPlugin {
                     update_board.after(process_input),
                 )
                     .run_if(in_state(MainState::Playing)),
-            )
-            .add_systems(Last, clear_update_queue);
+            );
     }
 }

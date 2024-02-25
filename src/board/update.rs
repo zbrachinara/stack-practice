@@ -12,9 +12,7 @@ use crate::assets::tables::{
 use crate::controller::{Controller, RotateCommand};
 use crate::state::MainState;
 
-use super::{
-    BoardQuery, BoardQueryItem, Hold, Matrix, MatrixUpdate, Mino, MinoKind, RotationState,
-};
+use super::{BoardQuery, BoardQueryItem, Hold, Matrix, Mino, MinoKind, RotationState};
 
 /// Checks if the matrix can accommodate the given piece.
 fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool {
@@ -29,8 +27,6 @@ fn has_free_space(matrix: &Matrix, mino: Mino, shape_table: &ShapeTable) -> bool
 /// the new piece. Line clears are also applied to the matrix, and any updates to the texture of the
 /// matrix are also registered.
 fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
-    let old_board = matrix.data.clone();
-
     for &p in &shape_table[mino] {
         *(matrix.get_mut(p + mino.position).unwrap()) = mino.kind;
     }
@@ -45,17 +41,6 @@ fn lock_piece(matrix: &mut Matrix, mino: Mino, shape_table: &ShapeTable) {
             real_ix += 1;
         }
     }
-
-    // register updates made to the board
-    let row_size = old_board[0].len();
-    let new_updates = old_board
-        .into_iter()
-        .flat_map(|i| i.into_iter())
-        .zip(matrix.data.iter().flat_map(|i| i.iter().copied()))
-        .zip((0..).map(|ix| ivec2(ix % row_size as i32, ix / row_size as i32)))
-        .filter(|((old, new), _)| old != new)
-        .map(|((old, new), loc)| MatrixUpdate { loc, old, new });
-    matrix.updates.extend(new_updates);
 }
 
 /// Functions within this impl block will panic if the active piece does not exist.
@@ -167,23 +152,6 @@ impl<'world> BoardQueryItem<'world> {
     pub fn clear_board(&mut self) {
         *(self.hold) = Hold::Empty;
         self.active.0 = None;
-
-        let mut updates = Vec::new();
-        for (y, row) in self.matrix.data.iter_mut().enumerate() {
-            for (x, cell) in row.iter_mut().enumerate() {
-                let p = ivec2(x as i32, y as i32);
-                if *cell != MinoKind::E {
-                    updates.push(MatrixUpdate {
-                        loc: p,
-                        old: *cell,
-                        new: MinoKind::E,
-                    });
-                    *cell = MinoKind::E;
-                }
-            }
-        }
-        self.matrix.updates.extend(updates);
-
         *self.queue = default(); // TODO empty the queue instead of filling it with arbitrary data
     }
 }
