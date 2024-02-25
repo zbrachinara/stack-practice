@@ -44,7 +44,11 @@ fn corners(r: IRect) -> [IVec2; 4] {
     ]
 }
 
-impl<'w, 's, 'all> MatrixMaterialSpawner<'w, 's> where 'w: 'all, 's: 'all {
+impl<'w, 's, 'all> MatrixMaterialSpawner<'w, 's>
+where
+    'w: 'all,
+    's: 'all,
+{
     fn quad_anchored(&mut self, r: IRect) -> Mesh2dHandle {
         let mesh_struct = Mesh::new(PrimitiveTopology::TriangleList, default())
             .with_inserted_attribute(
@@ -81,7 +85,11 @@ impl<'w, 's, 'all> MatrixMaterialSpawner<'w, 's> where 'w: 'all, 's: 'all {
         )
     }
 
-    pub fn spawn_with_data(&'all mut self, grid_bounds: IRect, data: Vec<u32>) -> EntityCommands<'all> {
+    pub fn spawn_with_data(
+        &'all mut self,
+        grid_bounds: IRect,
+        data: Vec<u32>,
+    ) -> EntityCommands<'all> {
         let all_textures = stack_images(&self.mino_textures.view(), &self.texture_server);
         let size = grid_bounds.size();
 

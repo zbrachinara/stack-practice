@@ -6,14 +6,13 @@ use smart_default::SmartDefault;
 pub mod queue;
 pub mod update;
 
+use crate::assets::tables::QueryShapeTable;
+use crate::board::update::default_mino;
 use crate::controller::process_input;
 use crate::replay::record::PreviousMatrix;
 use crate::{screens::GlobalSettings, state::MainState};
 
-use self::{
-    queue::PieceQueue,
-    update::{spawn_piece, update_board, PieceSpawnEvent},
-};
+use self::{queue::PieceQueue, update::update_board};
 
 #[derive(
 Debug, PartialEq, Eq, Hash, Clone, Copy,
@@ -227,19 +226,10 @@ fn respawn_board(
     });
 }
 
-fn start_game(
-    mut boards: Query<(Entity, &mut PieceQueue), With<Matrix>>,
-    mut commands: EventWriter<PieceSpawnEvent>,
-) {
-    for (board, mut queue) in boards.iter_mut() {
-        commands.send(PieceSpawnEvent {
-            board,
-            mino: Mino {
-                kind: queue.take(),
-                position: ivec2(4, 22),
-                rotation: RotationState::Up,
-            },
-        });
+fn start_game(mut boards: Query<BoardQuery>, shape: QueryShapeTable) {
+    for mut board in boards.iter_mut() {
+        let new_piece = board.queue.take();
+        board.spawn_piece(default_mino(new_piece), &shape);
     }
 }
 
@@ -260,9 +250,7 @@ pub struct BoardQuery {
 
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PieceSpawnEvent>()
-            // .add_systems(Startup, register_start_game)
-            .add_systems(OnEnter(MainState::Ready), respawn_board)
+        app.add_systems(OnEnter(MainState::Ready), respawn_board)
             .add_systems(
                 OnTransition {
                     from: MainState::Ready,
@@ -272,10 +260,8 @@ impl Plugin for BoardPlugin {
             )
             .add_systems(
                 Update,
-                (
-                    spawn_piece.run_if(on_event::<PieceSpawnEvent>()),
-                    update_board.after(process_input),
-                )
+                update_board
+                    .after(process_input)
                     .run_if(in_state(MainState::Playing)),
             );
     }

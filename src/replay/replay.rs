@@ -54,15 +54,19 @@ pub(crate) fn setup_progress_bar(
         ..default()
     };
 
-
     commands
         .spawn(ProgressBarBundle {
             progressbar: ProgressBar {
-                sections: record.segments.iter().enumerate().map(|(ix, segment)| {
-                    let time = segment.last().unwrap().time;
-                    let color = Color::hsl(0., 0.5, 0.85f32.powi(ix as i32));
-                    (time as u32, color)
-                }).collect_vec(),
+                sections: record
+                    .segments
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, segment)| {
+                        let time = segment.last().unwrap().time;
+                        let color = Color::hsl(0., 0.5, 0.85f32.powi(ix as i32));
+                        (time as u32, color)
+                    })
+                    .collect_vec(),
                 ..default()
             },
             material_node_bundle: MaterialNodeBundle {

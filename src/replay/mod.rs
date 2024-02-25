@@ -16,14 +16,12 @@ impl Plugin for ReplayPlugin {
             .add_event::<DeferUnfreeze>()
             .add_systems(
                 Update,
-                replay.run_if(
-                    in_state(MainState::PostGame).and_then(resource_changed::<ReplayInfo>),
-                ),
+                replay
+                    .run_if(in_state(MainState::PostGame).and_then(resource_changed::<ReplayInfo>)),
             )
             .add_systems(
                 PostUpdate,
-                record
-                    .run_if(resource_exists::<FirstFrame>.and_then(in_state(MainState::Playing))),
+                record.run_if(resource_exists::<FirstFrame>.and_then(in_state(MainState::Playing))),
             )
             .add_systems(
                 PostUpdate,

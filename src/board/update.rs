@@ -154,39 +154,36 @@ impl<'world> BoardQueryItem<'world> {
         self.active.0 = None;
         *self.queue = default(); // TODO empty the queue instead of filling it with arbitrary data
     }
-}
 
-#[derive(Event, Clone, Copy, Debug)]
-pub struct PieceSpawnEvent {
-    pub board: Entity,
-    pub(super) mino: Mino,
-}
-
-pub(super) fn spawn_piece(
-    mut events: EventReader<PieceSpawnEvent>,
-    mut boards: Query<BoardQuery>,
-    mut state: ResMut<NextState<MainState>>,
-    shape_table: QueryShapeTable,
-) {
-    for &PieceSpawnEvent { board, mino } in events.read() {
-        let mut board = boards.get_mut(board).unwrap();
-        if has_free_space(&board.matrix, mino, &shape_table) {
-            *board.drop_clock = default();
-            board.active.0 = Some(mino);
+    /// Attempts to spawn the given piece on the board, returning whether spawning was successful.
+    pub fn spawn_piece(&mut self, piece: Mino, shape_table: &ShapeTable) -> bool {
+        if has_free_space(&self.matrix, piece, shape_table) {
+            *self.drop_clock = default();
+            self.active.0 = Some(piece);
+            true
         } else {
-            state.0 = Some(MainState::PostGame);
+            false
         }
+    }
+}
+
+// TODO this should be determined at runtime
+pub fn default_mino(kind: MinoKind) -> Mino {
+    Mino {
+        kind,
+        position: ivec2(4, 22),
+        rotation: RotationState::Up,
     }
 }
 
 /// Update the state of the memory-representation of the board using player input
 pub(crate) fn update_board(
     mut boards: Query<BoardQuery>,
-    mut spawner: EventWriter<PieceSpawnEvent>,
     controller: Res<Controller>,
     shape_table: QueryShapeTable,
     kick_table: QueryKickTable,
     time: Res<Time>,
+    mut state: ResMut<NextState<MainState>>,
 ) {
     for mut board in boards.iter_mut() {
         if board.active.deref().0.is_none() {
@@ -200,14 +197,10 @@ pub(crate) fn update_board(
                 .unwrap();
             active.position.y -= farthest_legal_drop;
             lock_piece(&mut board.matrix, active, &shape_table);
-            spawner.send(PieceSpawnEvent {
-                board: board.id,
-                mino: Mino {
-                    kind: board.queue.take(),
-                    position: ivec2(4, 22),
-                    rotation: RotationState::Up,
-                },
-            });
+            let new_piece = board.queue.take();
+            if !board.spawn_piece(default_mino(new_piece), &shape_table) {
+                state.0 = Some(MainState::PostGame);
+            }
             board.hold.activate();
             continue;
         }
@@ -228,14 +221,10 @@ pub(crate) fn update_board(
                 let active = board.take_active();
                 lock_piece(&mut board.matrix, active, &shape_table);
                 board.hold.activate();
-                spawner.send(PieceSpawnEvent {
-                    board: board.id,
-                    mino: Mino {
-                        kind: board.queue.take(),
-                        position: ivec2(4, 22),
-                        rotation: RotationState::Up,
-                    },
-                });
+                let new_piece = board.queue.take();
+                if !board.spawn_piece(default_mino(new_piece), &shape_table) {
+                    state.0 = Some(MainState::PostGame);
+                }
                 continue;
             }
         } else {
@@ -263,14 +252,9 @@ pub(crate) fn update_board(
 
         if controller.hold {
             if let Some(replace) = board.switch_hold_active() {
-                spawner.send(PieceSpawnEvent {
-                    board: board.id,
-                    mino: Mino {
-                        kind: replace,
-                        position: ivec2(4, 22),
-                        rotation: RotationState::Up,
-                    },
-                });
+                if !board.spawn_piece(default_mino(replace), &shape_table) {
+                    state.0 = Some(MainState::PostGame);
+                }
             }
         }
     }
