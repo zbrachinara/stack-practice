@@ -26,9 +26,14 @@ impl Default for PieceQueue {
     }
 }
 
+// TODO should not assume that there will be a piece in the queue
 impl PieceQueue {
     pub fn window(&self) -> &VecDeque<MinoKind> {
         &self.window
+    }
+
+    pub fn peek(&mut self) -> MinoKind {
+        *self.window.front().unwrap()
     }
 
     pub fn take(&mut self) -> MinoKind {

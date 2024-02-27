@@ -67,7 +67,7 @@ impl<'world> BoardQueryItem<'world> {
             .and_then(|o| (o > 0).then_some(o - 1))
     }
 
-    fn drop_height(&mut self, shape_table: &QueryShapeTable, active: Mino) -> i32 {
+    fn drop_height(&mut self, shape_table: &ShapeTable, active: Mino) -> i32 {
         self.maximum_valid(shape_table, |y| active.tap_mut(|p| p.position.y -= y))
             .unwrap()
     }
@@ -137,6 +137,19 @@ impl<'world> BoardQueryItem<'world> {
             .is_some()
     }
 
+    fn hard_drop(&mut self, shape_table: &ShapeTable, state: &mut NextState<MainState>) {
+        let mut active = self.take_active();
+        active.position.y -= self.drop_height(shape_table, active);
+        lock_piece(&mut self.matrix, active, shape_table);
+        let new_piece = self.queue.peek();
+        if !self.spawn_piece(default_mino(new_piece), shape_table) {
+            state.0 = Some(MainState::PostGame);
+        } else {
+            self.queue.take();
+            self.hold.activate();
+        }
+    }
+
     /// Switches the held piece and the active piece, if it is allowed. By this point, the active
     /// piece must exist.
     fn switch_hold_active(&mut self) -> Option<MinoKind> {
@@ -196,15 +209,7 @@ pub(crate) fn update_board(
         }
 
         if controller.hard_drop {
-            let mut active = board.take_active();
-            let farthest_legal_drop = board.drop_height(&shape_table, active);
-            active.position.y -= farthest_legal_drop;
-            lock_piece(&mut board.matrix, active, &shape_table);
-            let new_piece = board.queue.take();
-            if !board.spawn_piece(default_mino(new_piece), &shape_table) {
-                state.0 = Some(MainState::PostGame);
-            }
-            board.hold.activate();
+            board.hard_drop(&shape_table, &mut state);
             continue;
         }
 
@@ -217,13 +222,7 @@ pub(crate) fn update_board(
         if farthest_legal_drop == 0 {
             board.drop_clock.lock += time.delta_seconds();
             if board.drop_clock.lock > board.settings.lock_delay {
-                let active = board.take_active();
-                lock_piece(&mut board.matrix, active, &shape_table);
-                board.hold.activate();
-                let new_piece = board.queue.take();
-                if !board.spawn_piece(default_mino(new_piece), &shape_table) {
-                    state.0 = Some(MainState::PostGame);
-                }
+                board.hard_drop(&shape_table, &mut state);
                 continue;
             }
         } else {
